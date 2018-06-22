@@ -88,3 +88,14 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# Sublime project
+*.sublime-project
+*.sublime-workspace
+
+# Directories
+test_files/
+
+# Testing files
+tool_test.py
+dev*.ipynb
