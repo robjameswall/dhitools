@@ -18,6 +18,9 @@ clr.AddReference('System')
 import DHI.Generic.MikeZero.DFS as dfs
 import System
 from System import Array
+from System.Runtime.InteropServices import GCHandle, GCHandleType
+
+import ctypes
 
 
 class Dfsu():
@@ -28,16 +31,27 @@ class Dfsu():
 
     def read_dfsu(self, filename):
         self.filename = filename
-        self._obj = dfs.DfsFileFactory.DfsuFileOpen(filename)
-        self.items = _dfsu_info(self._obj)
-        self.projection = str(self._obj.Projection.WKTString)
-        self.ele_table = _element_table(self._obj)
-        self.NtoE = _node_to_element_table(self._obj, self.ele_table)
-        self.nodes = _node_coordinates(self._obj)
-        self.elements = _element_coordinates(self._obj)
+        dfsu_object = dfs.DfsFileFactory.DfsuFileOpen(filename)
+        self.items = _dfsu_info(dfsu_object)
+        self.projection = str(dfsu_object.Projection.WKTString)
+        self.ele_table = _element_table(dfsu_object)
+        self.NtoE = _node_to_element_table(dfsu_object, self.ele_table)
+        self.nodes = _node_coordinates(dfsu_object)
+        self.elements = _element_coordinates(dfsu_object)
+
+        dfsu_object.Close()
 
     def summary(self):
         print(self.items)
+
+    def get_element_data(self, item_name, tstep_start=None, tstep_end=None,
+                         element_list=None):
+        dfsu_object = dfs.DfsFileFactory.DfsuFileOpen(self.filename)
+        ele_data = _element_data(dfsu_object=dfsu_object, item_name=item_name,
+                                 item_info=self.items, tstep_start=tstep_start,
+                                 tstep_end=tstep_end, element_list=element_list)
+        dfsu_object.Close()
+        return ele_data
 
 
 def _dfsu_info(dfsu_object):
@@ -61,6 +75,11 @@ def _dfsu_info(dfsu_object):
     dfsu_object.Close()
 
     return items
+
+
+'''
+Underlying dfsu mesh node and element functions
+'''
 
 
 def _element_table(dfsu_object):
@@ -125,3 +144,65 @@ def _element_coordinates(dfsu_object):
         element_coordinates[:, n] = ele_coords_temp
 
     return element_coordinates
+
+
+'''
+Read item node and element data
+'''
+
+
+def _single_to_ndarray(system_single):
+    '''
+    Converts data read in with dotNet (i.e. reading dfsu through DHI .NET
+    libraries) and efficiently converts System.Single[,] to numpy ndarray
+
+    Inputs:
+        - System.Single[,] : .NET Framwork single-precision float
+
+    Outputs:
+        - ndarray
+    '''
+
+    src_hndl = GCHandle.Alloc(system_single, GCHandleType.Pinned)
+
+    try:
+        src_ptr = src_hndl.AddrOfPinnedObject().ToInt64()
+        bufType = ctypes.c_float*len(system_single)
+        cbuf = bufType.from_address(src_ptr)
+        ndarray = np.frombuffer(cbuf, dtype=cbuf._type_)
+    finally:
+        if src_hndl.IsAllocated:
+            src_hndl.Free()
+    return ndarray
+
+
+def _element_data(dfsu_object, item_name, item_info,
+                  tstep_start=None, tstep_end=None,
+                  element_list=None):
+
+    item_idx = item_info[item_name]['index'] + 1
+    if tstep_start is None:
+        tstep_start = 0
+
+    if tstep_end is None:
+        # Only get one tstep specified by tstep_start
+        tstep_end = tstep_start + 1
+    elif tstep_end == -1:
+        # Get from tstep_start to the end
+        tstep_end = item_info['num_timesteps']
+    else:
+        # Add one to include tstep_end in output
+        tstep_end += 1
+
+    t_range = range(tstep_start, tstep_end)
+    if element_list:
+        ele_data = np.zeros(shape=(len(element_list), len(t_range)))
+    else:
+        ele_data = np.zeros(shape=(item_info['num_elements'], len(t_range)))
+    for i, t in enumerate(t_range):
+        if element_list:
+            ele_data[:,i] = _single_to_ndarray(dfsu_object.ReadItemTimeStep(item_idx, t).Data)[element_list]
+        else:
+            ele_data[:,i] = _single_to_ndarray(dfsu_object.ReadItemTimeStep(item_idx, t).Data)
+
+    return ele_data
