@@ -40,7 +40,7 @@ class Mesh():
         if self._file_input:
             print("Input mesh file: {}".format(self.filename))
         else:
-            print("No input file")
+            print("No .mesh input file")
 
         try:
             print("Num. Elmts = {}".format(self.num_elements))
