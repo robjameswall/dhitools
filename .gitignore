@@ -99,3 +99,4 @@ test_files/
 # Testing files
 tool_test.py
 dev*.ipynb
+dev*.py
