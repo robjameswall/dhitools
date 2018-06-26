@@ -63,6 +63,34 @@ class Dfsu():
 
         return node_data
 
+    def max_item(self, item_name, tstep_start=None, tstep_end=None,
+                 current_dir=False):
+        dfsu_object = dfs.DfsFileFactory.DfsuFileOpen(self.filename)
+        max_ele = _item_aggregate_stats(dfsu_object, item_name,
+                                        self.items, tstep_start=tstep_start,
+                                        tstep_end=tstep_end,
+                                        current_dir=current_dir)
+        dfsu_object.Close()
+
+        if current_dir:
+            return max_ele[0], max_ele[1]
+        else:
+            return max_ele
+
+    def min_item(self, item_name, tstep_start=None, tstep_end=None,
+                 current_dir=False):
+        dfsu_object = dfs.DfsFileFactory.DfsuFileOpen(self.filename)
+        min_ele = _item_aggregate_stats(dfsu_object, item_name,
+                                        self.items, tstep_start=tstep_start,
+                                        tstep_end=tstep_end, return_max=False,
+                                        current_dir=current_dir)
+        dfsu_object.Close()
+
+        if current_dir:
+            return max_ele[0], max_ele[1]
+        else:
+            return max_ele
+
 
 def _dfsu_info(dfsu_object):
 
@@ -330,3 +358,60 @@ def _map_ele_to_node(NtoE, element_coordinates, node_coordinates,
         zn[i] = _interp_node_z(i,NtoE,xe,ye,element_data,xn,yn)
 
     return zn
+
+
+'''
+dfsu stats
+'''
+
+
+def _item_aggregate_stats(dfsu_object, item_name, item_info, return_max=True,
+                          tstep_start=None, tstep_end=None, current_dir=False):
+    '''
+    Return max or min for input item across entire model or specific time range
+    '''
+    item_idx = item_info[item_name]['index'] + 1
+    ele_data = np.zeros((item_info['num_elements']))
+
+    # If current_dir provided, get current dir at input item_name max/min
+    if current_dir:
+        cd_index = item_info['Current direction']['index'] + 1
+        cd_ele_data = np.zeros((item_info['num_elements']))
+
+    # Sort time range
+    if tstep_start is None:
+        tstep_start = 0
+
+    if tstep_end is None:
+        # Get from tstep_start to the end
+        tstep_end = item_info['num_timesteps']
+    else:
+        # Add one to include tstep_end in output
+        tstep_end += 1
+
+    for tstep in range(tstep_start, tstep_end):
+        # Iterate tstep in time range
+        item_data = _single_to_ndarray(dfsu_object.ReadItemTimeStep(item_idx, tstep).Data)
+
+        # Determine elements to update
+        if return_max:
+            comp_boolean = np.greater(item_data, ele_data)
+        else:
+            comp_boolean = np.less(item_data, ele_data)
+
+        # Update elements which have new extreme
+        update_elements = item_data[comp_boolean]
+        ele_data[comp_boolean] = update_elements
+
+        # Update current_dir if specified
+        if current_dir:
+            cd_data = _single_to_ndarray(dfsu_object.ReadItemTimeStep(cd_index, tstep).Data)
+            update_cd_elements = cd_data[comp_boolean]
+            cd_ele_data[comp_boolean] = update_cd_elements
+
+    if current_dir:
+        # Return both item_name data and current_dir data
+        return ele_data, cd_ele_data
+    else:
+        # Else just item_name data
+        return ele_data
