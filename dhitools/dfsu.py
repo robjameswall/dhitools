@@ -4,7 +4,6 @@
 # Author: Robert Wall
 
 import numpy as np
-import mesh
 from dotenv import load_dotenv, find_dotenv
 import os
 import clr
@@ -44,14 +43,25 @@ class Dfsu():
     def summary(self):
         print(self.items)
 
-    def get_element_data(self, item_name, tstep_start=None, tstep_end=None,
-                         element_list=None):
+    def item_element_data(self, item_name, tstep_start=None, tstep_end=None,
+                          element_list=None):
         dfsu_object = dfs.DfsFileFactory.DfsuFileOpen(self.filename)
         ele_data = _element_data(dfsu_object=dfsu_object, item_name=item_name,
                                  item_info=self.items, tstep_start=tstep_start,
                                  tstep_end=tstep_end, element_list=element_list)
         dfsu_object.Close()
+
         return ele_data
+
+    def item_node_data(self, item_name, tstep_start=None, tstep_end=None):
+        dfsu_object = dfs.DfsFileFactory.DfsuFileOpen(self.filename)
+        node_data = _node_data(dfsu_object=dfsu_object, item_name=item_name,
+                               item_info=self.items, ele_cords=self.elements,
+                               node_cords=self.nodes, NtoE=self.NtoE,
+                               tstep_start=tstep_start, tstep_end=tstep_end)
+        dfsu_object.Close()
+
+        return node_data
 
 
 def _dfsu_info(dfsu_object):
@@ -180,6 +190,10 @@ def _element_data(dfsu_object, item_name, item_info,
                   tstep_start=None, tstep_end=None,
                   element_list=None):
 
+    if element_list:
+        # Subtract zero to match Python idx'ing
+        element_list = [e-1 for e in element_list]
+
     item_idx = item_info[item_name]['index'] + 1
     if tstep_start is None:
         tstep_start = 0
@@ -206,3 +220,113 @@ def _element_data(dfsu_object, item_name, item_info,
             ele_data[:,i] = _single_to_ndarray(dfsu_object.ReadItemTimeStep(item_idx, t).Data)
 
     return ele_data
+
+
+def _node_data(dfsu_object, item_name, item_info,
+               ele_cords, node_cords, NtoE,
+               tstep_start=None, tstep_end=None):
+
+    # Get item_name element data
+    ele_data = _element_data(dfsu_object, item_name, item_info,
+                             tstep_start, tstep_end)
+
+    # Get item_name node data
+    node_data = np.zeros(shape=(len(node_cords), ele_data.shape[1]))
+    for i in range(ele_data.shape[1]):
+        node_data[:,i] = _map_ele_to_node(NtoE, ele_cords, node_cords, ele_data[:,i])
+
+    return node_data
+
+
+def _interp_node_z(nn,NtoE,xe,ye,ze,xn,yn):
+    '''
+    Interpolate zn node at node (xn,yn) from element (xe, ye, ze)
+    '''
+    nelmts = len(np.where(NtoE[nn,:] != 0)[0])
+
+    if nelmts < 1:
+        zn = np.nan
+        return zn
+
+    Rx = 0
+    Ry = 0
+    Ixx = 0
+    Iyy = 0
+    Ixy = 0
+
+    for i in range(nelmts):
+        el_id = int(NtoE[nn,i]-1)
+        dx = xe[el_id] - xn[nn]
+        dy = ye[el_id] - yn[nn]
+        Rx = Rx + dx
+        Ry = Ry + dy
+        Ixx = Ixx + dx*dx
+        Iyy = Iyy + dy*dy
+        Ixy = Ixy + dx*dy
+
+    lamda = Ixx*Iyy - Ixy*Ixy
+
+    # Pseudo laplace procedure
+    if abs(lamda) > 1e-10*(Ixx*Iyy):
+        lamda_x = (Ixy*Ry - Iyy*Rx)/lamda
+        lamda_y = (Ixy*Rx - Ixx*Ry)/lamda
+
+        omega_sum = float(0)
+        zn = float(0)
+
+        for i in range(nelmts):
+            el_id = int(NtoE[nn,i]-1)
+
+            omega = 1 + lamda_x*(xe[el_id]-xn[nn]) + lamda_y*(ye[el_id]-yn[nn])
+            if omega < 0:
+                omega = 0
+            elif omega > 2:
+                omega = 2
+            omega_sum = omega_sum + omega
+            zn = zn + omega*ze[el_id]
+
+        if abs(omega_sum) > 1e-10:
+            zn = zn/omega_sum
+        else:
+            omega_sum = float(0)
+    else:
+        omega_sum = float(0)
+
+    # If not successful use inverse distance average
+    if omega_sum == 0:
+        zn = 0
+
+        for i in range(nelmts):
+            el_id = int(NtoE[nn,i]-1)
+
+            dx = xe[el_id] - xn[nn]
+            dy = ye[el_id] - yn[nn]
+
+            omega = float(1) / np.sqrt(dx*dx+dy*dy)
+            omega_sum = omega_sum + omega
+            zn = zn + omega*ze[el_id]
+
+        if omega_sum != 0:
+            zn = zn/omega_sum
+        else:
+            zn = float(0)
+
+    return zn
+
+
+def _map_ele_to_node(NtoE, element_coordinates, node_coordinates,
+                     element_data):
+    '''
+    Get node data relating to specific element
+    '''
+    xn = node_coordinates[:,0]
+    yn = node_coordinates[:,1]
+    xe = element_coordinates[:,0]
+    ye = element_coordinates[:,1]
+
+    zn = np.zeros(len(xn))
+
+    for i in range(len(xn)):
+        zn[i] = _interp_node_z(i,NtoE,xe,ye,element_data,xn,yn)
+
+    return zn
