@@ -20,5 +20,7 @@ Optional dependencies:
 
 Due depending on the MIKE SDK `DLL` libraries only Windows is supported.
 
-### Setup
 **TODO**
+
+* Setup
+* Sphinx documents
