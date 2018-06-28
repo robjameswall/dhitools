@@ -357,26 +357,26 @@ Read item node and element data
 """
 
 
-def _single_to_ndarray(system_single):
+def _dotnet_arr_to_ndarr(dotnet_arr):
     """
     Converts data read in with dotNet (i.e. reading dfsu through DHI .NET
-    libraries) and efficiently converts System.Single[,] to numpy ndarray
+    libraries) and efficiently converts to numpy ndarray
 
     Parameters
     ----------
-    System.Single[,] : .NET Framwork single-precision float
+    dotnet_array : .NET Framwork single-precision float
 
     Returns
     -------
-    ndarray : System.Single converted to ndarray
+    ndarray : dotnet_array converted to ndarray
 
     """
 
-    src_hndl = GCHandle.Alloc(system_single, GCHandleType.Pinned)
+    src_hndl = GCHandle.Alloc(dotnet_arr, GCHandleType.Pinned)
 
     try:
         src_ptr = src_hndl.AddrOfPinnedObject().ToInt64()
-        bufType = ctypes.c_float*len(system_single)
+        bufType = ctypes.c_float*len(dotnet_arr)
         cbuf = bufType.from_address(src_ptr)
         ndarray = np.frombuffer(cbuf, dtype=cbuf._type_)
     finally:
@@ -414,9 +414,9 @@ def _element_data(dfsu_object, item_name, item_info,
         ele_data = np.zeros(shape=(item_info['num_elements'], len(t_range)))
     for i, t in enumerate(t_range):
         if element_list:
-            ele_data[:,i] = _single_to_ndarray(dfsu_object.ReadItemTimeStep(item_idx, t).Data)[element_list]
+            ele_data[:,i] = _dotnet_arr_to_ndarr(dfsu_object.ReadItemTimeStep(item_idx, t).Data)[element_list]
         else:
-            ele_data[:,i] = _single_to_ndarray(dfsu_object.ReadItemTimeStep(item_idx, t).Data)
+            ele_data[:,i] = _dotnet_arr_to_ndarr(dfsu_object.ReadItemTimeStep(item_idx, t).Data)
 
     return ele_data
 
@@ -596,7 +596,7 @@ def _item_aggregate_stats(dfsu_object, item_name, item_info, return_max=True,
 
     for tstep in range(tstep_start, tstep_end):
         # Iterate tstep in time range
-        item_data = _single_to_ndarray(dfsu_object.ReadItemTimeStep(item_idx, tstep).Data)
+        item_data = _dotnet_arr_to_ndarr(dfsu_object.ReadItemTimeStep(item_idx, tstep).Data)
 
         # Determine elements to update
         if return_max:
@@ -610,7 +610,7 @@ def _item_aggregate_stats(dfsu_object, item_name, item_info, return_max=True,
 
         # Update current_dir if specified
         if current_dir:
-            cd_data = _single_to_ndarray(dfsu_object.ReadItemTimeStep(cd_index, tstep).Data)
+            cd_data = _dotnet_arr_to_ndarr(dfsu_object.ReadItemTimeStep(cd_index, tstep).Data)
             update_cd_elements = cd_data[comp_boolean]
             cd_ele_data[comp_boolean] = update_cd_elements
 
