@@ -4,6 +4,22 @@
 # Author: Robert Wall
 
 import numpy as np
+from dotenv import load_dotenv, find_dotenv
+import os
+import clr
+
+# Set path to MIKE SDK
+load_dotenv(find_dotenv())
+sdk_path = os.getenv('MIKE_SDK')
+dfs_dll = os.getenv('MIKE_DFS')
+clr.AddReference(os.path.join(sdk_path, dfs_dll))
+clr.AddReference('System')
+
+# Import .NET libraries
+import DHI.Generic.MikeZero.DFS as dfs
+import System
+
+import _utils
 
 
 class Mesh():
@@ -14,7 +30,7 @@ class Mesh():
         self.zUnitKey = 1000  # Default value (1000 = meter)
 
         if filename is not None:
-            self.read_mesh(self.filename)
+            self.read_mesh()
 
     def read_mesh(self, filename=None):
         '''
@@ -23,12 +39,18 @@ class Mesh():
         if filename is None:
             filename = self.filename
 
-        elmts, nodes, proj, zunitkey = _read_mesh(filename)
+        dfs_obj = dfs.mesh.MeshFile.ReadMesh(filename)
+        mesh_in = _read_mesh(dfs_obj)
 
-        self.elements = elmts
-        self.nodes = nodes
-        self.projection = proj
-        self.zUnitKey = zunitkey
+        self.nodes = mesh_in[0]
+        self.node_ids = mesh_in[1]
+        self.node_boundary_codes = mesh_in[2]
+        self.element_table = mesh_in[3]
+        self.node_table = mesh_in[4]
+        self.elements = mesh_in[5]
+        self.element_ids = mesh_in[6]
+        self.projection = str(dfs_obj.ProjectionString)
+        self.zUnitKey = dfs_obj.EumQuantity.Unit
         self._file_input = True
         self.num_elements = len(self.elements)
         self.num_nodes = len(self.nodes)
@@ -44,8 +66,8 @@ class Mesh():
 
         try:
             print("Num. Elmts = {}".format(self.num_elements))
-            print("Num. Elmts = {}".format(self.num_nodes))
-            print("Mean elevation = {}".format(np.mean(self.nodes[:, 3])))
+            print("Num. Nodes = {}".format(self.num_nodes))
+            print("Mean elevation = {}".format(np.mean(self.nodes[:, 2])))
             print("Projection = \n {}".format(self.projection))
         except AttributeError:
             print("Object has no element or node properties. Read in mesh.")
@@ -54,13 +76,14 @@ class Mesh():
         '''
         Write new mesh file
         '''
-        try:
-            _write_mesh(filename=output_name,
-                        Elmts=self.elements, Nodes=self.nodes,
-                        proj=self.projection, zUnitKey=self.zUnitKey)
-            print("Successfully output mesh to: {}".format(output_name))
-        except AttributeError:
-            print("Error: Object has no element or node properties. Read in mesh.")
+        _write_mesh(filename=output_name,
+                    nodes=self.nodes,
+                    node_id=self.node_ids,
+                    node_boundary_code=self.node_boundary_codes,
+                    element_table=self.element_table,
+                    element_ids=self.element_ids,
+                    proj=self.projection,
+                    zUnitKey=self.zUnitKey)
 
     def interpolate_rasters(self, raster_list, method='nearest'):
         '''
@@ -87,97 +110,151 @@ class Mesh():
             self.nodes[:, 3][updated_bool] = only_updated_z
 
 
-def _read_mesh(filename):
-    '''
-    Read nodes and element connectivity from a .mesh file
+def _read_mesh(dfs_obj):
+    """
+    Function description...
 
-    Outputs:
-        elmt: Element-Node table, for each element list the node number,
-                as returned by the delaunay function
-        node: Node coordinates having 4 columns, [id, x, y, z, code]
-        proj: Projection string of mesh
-        zUnitKey: EUM Unit key for Z values in mesh. Common values:
-                    1000 = metre
-                    1014 = feet (US)
-                  Check EUM system for details
+    Parameters
+    ----------
+    input_1 : dtype, shape (n_components,)
+        input_1 description...
+    input_2 : int
+        input_2 description...
 
-    '''
+    Returns
+    -------
+    weights : array, shape (n_components,)
 
-    # Open mesh file
-    with open(filename, 'r') as fid:
-        # Read all lines
-        lines = fid.readlines()
+    """
+    num_nodes = dfs_obj.NumberOfNodes
+    num_elements = dfs_obj.NumberOfElements
 
-        # First line contains number of nodes, zUnitKey (ie. metres)
-        # and projection
-        first_line = lines[0]
-        split_first_line = first_line.split()
+    # Node coordinates
+    nodes = _node_coordinates(dfs_obj)
 
-        # Some files might not have a zunitkey and projection
-        if len(split_first_line) is 4:
-            nnodes = int(split_first_line[2])
-            zunitkey = int(split_first_line[1])
-            proj = split_first_line[3]
-        elif len(split_first_line) is 2:
-            nnodes = int(split_first_line[0])
-            zunitkey = []
-            proj = []
-        else:
-            print('Check mesh header file')
-            return None
+    # Node ids
+    node_ids = _utils.dotnet_arr_to_ndarr(dfs_obj.NodeIds)
 
-        # Sort nodes in to array
-        nodes_str = lines[1:nnodes + 1]   # Get list of nodes as srt for each line
-        nodes_tmp = [line.split() for line in nodes_str]  # Split str on each line
-        nodes_float = [map(float, line) for line in nodes_tmp]  # Convert to floats
-        nodes = np.array(nodes_float)
+    # Node boundary codes
+    boundary_code = _utils.dotnet_arr_to_ndarr(dfs_obj.Code)
 
-        # Sort elements in to array
-        elmt_str = lines[nnodes + 2:]
-        elmt_tmp = [line.split() for line in elmt_str]
-        elmt_float = [map(float, line) for line in elmt_tmp]
-        elmts = np.array(elmt_float)
+    # Element table
+    ele_table = _element_table(dfs_obj)
 
-        return elmts, nodes, proj, zunitkey
+    # Node table
+    node_table = _node_table(num_nodes, num_elements, ele_table)
+
+    # Element coordinates
+    elements = _mesh_element_coordinates(ele_table, nodes)
+
+    # Element ids
+    element_ids = _utils.dotnet_arr_to_ndarr(dfs_obj.ElementIds)
+
+    return nodes, node_ids, boundary_code, ele_table, node_table, elements, element_ids
 
 
-def _write_mesh(filename, Elmts, Nodes, proj, zUnitKey=1000):
-    '''
-    Write a MikeZero .mesh file
+def _node_coordinates(dfs_obj):
+    xn = _utils.dotnet_arr_to_ndarr(dfs_obj.X)
+    yn = _utils.dotnet_arr_to_ndarr(dfs_obj.Y)
+    zn = _utils.dotnet_arr_to_ndarr(dfs_obj.Z)
 
-    Inputs:
-        Elmts    : Element-Node table, for each element list the node
-                   number, e.g., as returned by the delaunay function.
-        Nodes    : Node coordinates having 4 columns, [x, y, z, code]
-        filename : Name of file to write
-        proj     : String containing coordinate system
-        zUnitKey : EUM Unit key for Z values in mesh. Common values:
-                     1000 = meter (default)
-                     1014 = feet US
-                   Check EUM system for details (EUM.xml). Must be a length
-                   unit.
+    return np.column_stack([xn,yn,zn])
 
-    NOTE: THIS HAS ONLY BEEN TESTED FOR TRIANGLE ELEMENTS
 
-    '''
+def _element_table(dfs_obj):
+    table_obj = dfs_obj.ElementTable
+    ele_table = np.zeros((len(table_obj), 3), dtype=int)
+    for i, e in enumerate(table_obj):
+        ele_table[i, :] = _utils.dotnet_arr_to_ndarr(e)
+    return ele_table
 
-    eum_type = 100079  # Some number specified by DHI, so just include it
-    nnodes = len(Nodes)
+
+def _node_table(num_nodes, num_elements, ele_table):
+    """ Create node_table from ele_table """
+
+    # Set placeholders for constructing node-to-element-table (node_table)
+    e = np.arange(num_elements)
+    u = np.ones(num_elements)
+    I = np.concatenate((e, e, e))
+    J = np.concatenate((ele_table[:,0],ele_table[:,1],ele_table[:,2]))
+    K = np.concatenate((u*1, u*2, u*3))
+
+    # Construct node_table
+    count = np.zeros((num_nodes,1))
+    for i in range(len(I)):
+        count[J[i-1]-1] = count[J[i-1]-1]+1
+    num_cols = int(count.max())
+
+    node_table = np.zeros((num_nodes,num_cols), dtype='int')
+    count = np.zeros((num_nodes,1))
+    for i in range(len(I)):
+        count[J[i-1]-1] = count[J[i-1]-1]+1
+        node_table[J[i-1]-1, int(count[J[i-1]-1])-1] = I[i]
+
+    return node_table
+
+
+def _mesh_element_coordinates(element_tables, nodes):
+
+    # Node coords
+    xn = nodes[:, 0]
+    yn = nodes[:, 1]
+    zn = nodes[:, 2]
+
+    # Elmt node index mapping (minus 1 because python indexing)
+    node_map = element_tables[:, 1:].astype('int') - 1
+
+    # Take mean of nodes mapped to element
+    xe = np.mean(xn[node_map], axis=1)
+    ye = np.mean(yn[node_map], axis=1)
+    ze = np.mean(zn[node_map], axis=1)
+
+    elmt_numbers = element_tables[:, 0]
+
+    return np.stack([elmt_numbers, xe, ye, ze], axis=1)
+
+
+def _write_mesh(filename, nodes, node_id,
+                node_boundary_code, element_table,
+                element_ids, proj, zUnitKey=1000):
+    """
+    Function description...
+
+    Parameters
+    ----------
+    input_1 : dtype, shape (n_components,)
+        input_1 description...
+    input_2 : int
+        input_2 description...
+
+    Returns
+    -------
+    weights : array, shape (n_components,)
+
+    """
+
+    eum_type = 100079  # Specify item type as 'bathymetry' (MIKE convention)
+    num_nodes = len(nodes)
+
+    node_write_fmt = np.column_stack([node_id, nodes, node_boundary_code])
+    ele_write_fmt = np.column_stack([element_ids, element_table])
 
     # Open file to write to
     with open(filename, 'w') as target:
         # Format first line
-        first_line = '%i  %i  %i  %s\n' % (eum_type, zUnitKey, nnodes, proj)
+        first_line = '%i  %i  %i  %s\n' % (eum_type, zUnitKey, num_nodes, proj)
         target.write(first_line)
 
         # Nodes
-        np.savetxt(target, Nodes, fmt='%i %-17.15g %17.15g %17.15g %i',
+        np.savetxt(target, node_write_fmt, fmt='%i %-17.15g %17.15g %17.15g %i',
                    newline='\n', delimiter=' ')
 
         # Element header
-        nelmts = len(Elmts)
-        elmt_header = '%i %i %i\n' % (nelmts, 3, 21)
+        num_elements = len(ele_write_fmt)
+
+        # Specify only triangular elements
+        elmt_header = '%i %i %i\n' % (num_elements, 3, 21)
         target.write(elmt_header)
 
         # Elements
-        np.savetxt(target, Elmts, fmt='%i', newline='\n', delimiter=' ')
+        np.savetxt(target, ele_write_fmt, fmt='%i', newline='\n', delimiter=' ')
