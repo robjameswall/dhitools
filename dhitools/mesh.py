@@ -18,11 +18,56 @@ clr.AddReference('System')
 # Import .NET libraries
 import DHI.Generic.MikeZero.DFS as dfs
 import System
+from System import Array
 
 import _utils
 
 
-class Mesh():
+class Mesh(object):
+    """
+    MIKE21 .mesh
+
+    Parameters
+    ----------
+    filename : str
+        Path to .mesh
+
+    Attributes
+    ----------
+    filename : str
+        Path to .mesh
+    nodes : ndarray, shape (num_nodes, 3)
+        (x,y,z) coordinate for each node
+    elements : ndarray, shape (num_ele, 3)
+        (x,y,z) coordinate for each element
+    ele_table : ndarray, shape (num_ele, 3)
+        Defines for each element the nodes that define the element.
+    node_table : ndarray, shape (num_nodes, n)
+        Defines for each node the element adjacent to this node. May contain
+        padded zeros
+    node_ids : ndarray, shape (num_nodes, )
+        Ordered node ids
+    node_boundary_code : ndarray, shape (num_nodes, )
+        Each nodes boundary code
+    element_ids : ndarray, shape (num_elements, )
+        Ordered element ids
+    num_nodes : int
+        Number of nodes elements
+    num_elements : int
+        Number of mesh elements
+    projection : str
+        .mesh spatial projection string in WKT format
+    zUnitKey : int
+        EUM unit designating quantity of Z variable
+        1000 = metres
+        1014 = U.S. feet
+
+    See Also
+    ----------
+    Many of these methods have been adapated from the DHI MATLAB Toolbox:
+        https://www.mikepoweredbydhi.com/download/mike-by-dhi-tools/
+        coastandseatools/dhi-matlab-toolbox
+    """
 
     def __init__(self, filename=None):
         self.filename = filename
@@ -39,7 +84,15 @@ class Mesh():
         if filename is None:
             filename = self.filename
 
-        dfs_obj = dfs.mesh.MeshFile.ReadMesh(filename)
+        if filename.endswith('.mesh'):
+            dfs_obj = dfs.mesh.MeshFile.ReadMesh(filename)
+            self.projection = str(dfs_obj.ProjectionString)
+            self.zUnitKey = dfs_obj.EumQuantity.Unit
+        elif filename.endswith('.dfsu'):
+            dfs_obj = dfs.DfsFileFactory.DfsuFileOpen(filename)
+            self.projection = str(dfs_obj.Projection.WKTString)
+            self.zUnitKey = dfs_obj.get_ZUnit()
+
         mesh_in = _read_mesh(dfs_obj)
 
         self.nodes = mesh_in[0]
@@ -49,11 +102,12 @@ class Mesh():
         self.node_table = mesh_in[4]
         self.elements = mesh_in[5]
         self.element_ids = mesh_in[6]
-        self.projection = str(dfs_obj.ProjectionString)
-        self.zUnitKey = dfs_obj.EumQuantity.Unit
         self._file_input = True
         self.num_elements = len(self.elements)
         self.num_nodes = len(self.nodes)
+
+        if filename.endswith('.dfsu'):
+            dfs_obj.Close()
 
     def summary(self):
         '''
@@ -144,16 +198,23 @@ def _read_mesh(dfs_obj):
     # Node table
     node_table = _node_table(num_nodes, num_elements, ele_table)
 
-    # Element coordinates
-    elements = _mesh_element_coordinates(ele_table, nodes)
-
     # Element ids
     element_ids = _utils.dotnet_arr_to_ndarr(dfs_obj.ElementIds)
+
+    # Element coordinates
+    if dfs_obj.GetType().get_Name() == 'DfsuFile':
+        # Use internal MIKE SDK method if dfsu file
+        elements = _dfsu_element_coordinates(dfs_obj)
+
+    elif dfs_obj.GetType().get_Name() == 'MeshFile':
+        # Else derive coordinates from element table and nodes
+        elements = _mesh_element_coordinates(ele_table, nodes)
 
     return nodes, node_ids, boundary_code, ele_table, node_table, elements, element_ids
 
 
 def _node_coordinates(dfs_obj):
+    """ Read in node (x,y,z) """
     xn = _utils.dotnet_arr_to_ndarr(dfs_obj.X)
     yn = _utils.dotnet_arr_to_ndarr(dfs_obj.Y)
     zn = _utils.dotnet_arr_to_ndarr(dfs_obj.Z)
@@ -162,6 +223,7 @@ def _node_coordinates(dfs_obj):
 
 
 def _element_table(dfs_obj):
+    """ Defines for each element the nodes that define the element """
     table_obj = dfs_obj.ElementTable
     ele_table = np.zeros((len(table_obj), 3), dtype=int)
     for i, e in enumerate(table_obj):
@@ -195,7 +257,21 @@ def _node_table(num_nodes, num_elements, ele_table):
 
 
 def _mesh_element_coordinates(element_tables, nodes):
+    """
+    Calc element coordinates from element_table and nodes
 
+    Parameters
+    ----------
+    input_1 : dtype, shape (n_components,)
+        input_1 description...
+    input_2 : int
+        input_2 description...
+
+    Returns
+    -------
+    weights : array, shape (n_components,)
+
+    """
     # Node coords
     xn = nodes[:, 0]
     yn = nodes[:, 1]
@@ -212,6 +288,42 @@ def _mesh_element_coordinates(element_tables, nodes):
     elmt_numbers = element_tables[:, 0]
 
     return np.stack([elmt_numbers, xe, ye, ze], axis=1)
+
+
+def _dfsu_element_coordinates(dfsu_object):
+    """
+    Use MIKE SDK method to calc element coords from dfsu_object
+
+    Parameters
+    ----------
+    input_1 : dtype, shape (n_components,)
+        input_1 description...
+    input_2 : int
+        input_2 description...
+
+    Returns
+    -------
+    weights : array, shape (n_components,)
+
+    """
+    element_coordinates = np.zeros(shape=(dfsu_object.NumberOfElements, 3))
+
+    # Convert nodes to .NET System double to input to method
+    xtemp = Array.CreateInstance(System.Double, 0)
+    ytemp = Array.CreateInstance(System.Double, 0)
+    ztemp = Array.CreateInstance(System.Double, 0)
+
+    # Get element coords
+    elemts_temp = dfs.dfsu.DfsuUtil.CalculateElementCenterCoordinates(dfsu_object, xtemp, ytemp, ztemp)
+
+    # Place in array; need to get from .NET Array to numpy array
+    for n in range(3):
+        ele_coords_temp = []
+        for ele in elemts_temp[n+1]:
+            ele_coords_temp.append(ele)
+        element_coordinates[:, n] = ele_coords_temp
+
+    return element_coordinates
 
 
 def _write_mesh(filename, nodes, node_id,
