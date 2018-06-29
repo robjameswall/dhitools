@@ -285,9 +285,7 @@ def _mesh_element_coordinates(element_tables, nodes):
     ye = np.mean(yn[node_map], axis=1)
     ze = np.mean(zn[node_map], axis=1)
 
-    elmt_numbers = element_tables[:, 0]
-
-    return np.stack([elmt_numbers, xe, ye, ze], axis=1)
+    return np.stack([xe, ye, ze], axis=1)
 
 
 def _dfsu_element_coordinates(dfsu_object):
