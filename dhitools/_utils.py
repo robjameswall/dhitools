@@ -5,8 +5,6 @@ import clr
 
 clr.AddReference('System')
 
-import System
-from System import Array
 from System.Runtime.InteropServices import GCHandle, GCHandleType
 
 import ctypes
@@ -32,13 +30,13 @@ def dotnet_arr_to_ndarr(dotnet_arr):
 
     try:
         src_ptr = src_hndl.AddrOfPinnedObject().ToInt64()
-        dtype = dotnet_arr.GetType()
+        dtype = dotnet_arr.GetType().get_Name()
 
-        if dtype == Array.CreateInstance(System.Single,0).GetType():
+        if dtype == 'Single[]':
             bufType = ctypes.c_float*len(dotnet_arr)
-        elif dtype == Array.CreateInstance(System.Int32,0).GetType():
+        elif dtype == 'Int32[]':
             bufType = ctypes.c_int*len(dotnet_arr)
-        elif dtype == Array.CreateInstance(System.Double,0).GetType():
+        elif dtype == 'Double[]':
             bufType = ctypes.c_double*len(dotnet_arr)
         cbuf = bufType.from_address(src_ptr)
         ndarray = np.frombuffer(cbuf, dtype=cbuf._type_)
