@@ -5,6 +5,8 @@ Author: Robert Wall
 """
 
 import numpy as np
+import mesh
+import _utils
 from dotenv import load_dotenv, find_dotenv
 import os
 import clr
@@ -18,14 +20,8 @@ clr.AddReference('System')
 
 # Import .NET libraries
 import DHI.Generic.MikeZero.DFS as dfs
-import System
-from System import Array
-from System.Runtime.InteropServices import GCHandle, GCHandleType
 
-import ctypes
-
-
-class Dfsu():
+class Dfsu(mesh.Mesh):
     """
     MIKE21 .dfsu
 
@@ -61,25 +57,31 @@ class Dfsu():
         coastandseatools/dhi-matlab-toolbox
     """
 
-    def __init__(self, filename):
-
-        self.read_dfsu(filename)
+    def __init__(self, filename=None):
+        super(Dfsu, self).__init__(filename)
+        if self.filename is not None:
+            dfsu_object = dfs.DfsFileFactory.DfsuFileOpen(self.filename)
+            self.items = _dfsu_info(dfsu_object)
+            dfsu_object.Close()
 
     def read_dfsu(self, filename):
         """ Read in .dfsu file and read attributes """
-        self.filename = filename
-        dfsu_object = dfs.DfsFileFactory.DfsuFileOpen(filename)
-        self.items = _dfsu_info(dfsu_object)
-        self.projection = str(dfsu_object.Projection.WKTString)
-        self.ele_table = _element_table(dfsu_object)
-        self.node_table = _node_table(dfsu_object, self.ele_table)
-        self.nodes = _node_coordinates(dfsu_object)
-        self.elements = _element_coordinates(dfsu_object)
-
-        dfsu_object.Close()
+        self.read_mesh(filename)
 
     def summary(self):
-        print(self.items)
+        print("Input .dfsu file: {}".format(self.filename))
+        print("Num. Elmts = {}".format(self.num_elements))
+        print("Num. Nodes = {}".format(self.num_nodes))
+        print("Mean elevation = {}".format(np.mean(self.nodes[:, 2])))
+        print("Projection = \n {}".format(self.projection))
+        print("\n")
+        print("Number of items = {}".format(len(self.items) - 3))
+        print("Items:")
+        for k in self.items.keys():
+            if k not in ['num_elements', 'num_nodes', 'num_timesteps']:
+                print("{}, unit = {}, index = {}".format(k,
+                                                         self.items[k]['unit'],
+                                                         self.items[k]['index']))
 
     def item_element_data(self, item_name, tstep_start=None, tstep_end=None,
                           element_list=None):
@@ -280,109 +282,8 @@ def _dfsu_info(dfsu_object):
 
 
 """
-Underlying dfsu mesh node and element functions
-"""
-
-
-def _element_table(dfsu_object):
-    """ Defines for each element the nodes that define the element """
-    ele_table_object = dfsu_object.ElementTable
-    element_table = np.zeros(shape=(dfsu_object.NumberOfElements,3), dtype='int')
-    for i, e in enumerate(ele_table_object):
-        element_table[i,:] = [e[0], e[1], e[2]]
-    return element_table
-
-
-def _node_table(dfsu_object, ele_table):
-    """ Create node_table from ele_table """
-    num_nodes = dfsu_object.NumberOfNodes
-    num_elements = dfsu_object.NumberOfElements
-
-    # Set placeholders for constructing node-to-element-table (node_table)
-    e = np.arange(num_elements)
-    u = np.ones(num_elements)
-    I = np.concatenate((e, e, e))
-    J = np.concatenate((ele_table[:,0],ele_table[:,1],ele_table[:,2]))
-    K = np.concatenate((u*1, u*2, u*3))
-
-    # Construct node_table
-    count = np.zeros((num_nodes,1))
-    for i in range(len(I)):
-        count[J[i-1]-1] = count[J[i-1]-1]+1
-    num_cols = int(count.max())
-
-    node_table = np.zeros((num_nodes,num_cols), dtype='int')
-    count = np.zeros((num_nodes,1))
-    for i in range(len(I)):
-        count[J[i-1]-1] = count[J[i-1]-1]+1
-        node_table[J[i-1]-1, int(count[J[i-1]-1])-1] = I[i]
-
-    return node_table
-
-
-def _node_coordinates(dfsu_object):
-    """ Read in node (x,y,z) """
-    xn = np.array([point for point in dfsu_object.X])
-    yn = np.array([point for point in dfsu_object.Y])
-    zn = np.array([point for point in dfsu_object.Z])
-
-    node_coordinates = np.column_stack([xn, yn, zn])
-    return node_coordinates
-
-
-def _element_coordinates(dfsu_object):
-    """ Read in element (x,y,z) """
-    element_coordinates = np.zeros(shape=(dfsu_object.NumberOfElements, 3))
-
-    # Convert nodes to .NET System double to input to method
-    xtemp = Array.CreateInstance(System.Double, 0)
-    ytemp = Array.CreateInstance(System.Double, 0)
-    ztemp = Array.CreateInstance(System.Double, 0)
-
-    # Get element coords
-    elemts_temp = dfs.dfsu.DfsuUtil.CalculateElementCenterCoordinates(dfsu_object, xtemp, ytemp, ztemp)
-
-    # Place in array; need to get from .NET Array to numpy array
-    for n in range(3):
-        ele_coords_temp = []
-        for ele in elemts_temp[n+1]:
-            ele_coords_temp.append(ele)
-        element_coordinates[:, n] = ele_coords_temp
-
-    return element_coordinates
-
-
-"""
 Read item node and element data
 """
-
-
-def _dotnet_arr_to_ndarr(dotnet_arr):
-    """
-    Converts data read in with dotNet (i.e. reading dfsu through DHI .NET
-    libraries) and efficiently converts to numpy ndarray
-
-    Parameters
-    ----------
-    dotnet_array : .NET Framwork single-precision float
-
-    Returns
-    -------
-    ndarray : dotnet_array converted to ndarray
-
-    """
-
-    src_hndl = GCHandle.Alloc(dotnet_arr, GCHandleType.Pinned)
-
-    try:
-        src_ptr = src_hndl.AddrOfPinnedObject().ToInt64()
-        bufType = ctypes.c_float*len(dotnet_arr)
-        cbuf = bufType.from_address(src_ptr)
-        ndarray = np.frombuffer(cbuf, dtype=cbuf._type_)
-    finally:
-        if src_hndl.IsAllocated:
-            src_hndl.Free()
-    return ndarray
 
 
 def _element_data(dfsu_object, item_name, item_info,
@@ -414,9 +315,9 @@ def _element_data(dfsu_object, item_name, item_info,
         ele_data = np.zeros(shape=(item_info['num_elements'], len(t_range)))
     for i, t in enumerate(t_range):
         if element_list:
-            ele_data[:,i] = _dotnet_arr_to_ndarr(dfsu_object.ReadItemTimeStep(item_idx, t).Data)[element_list]
+            ele_data[:,i] = _utils.dotnet_arr_to_ndarr(dfsu_object.ReadItemTimeStep(item_idx, t).Data)[element_list]
         else:
-            ele_data[:,i] = _dotnet_arr_to_ndarr(dfsu_object.ReadItemTimeStep(item_idx, t).Data)
+            ele_data[:,i] = _utils.dotnet_arr_to_ndarr(dfsu_object.ReadItemTimeStep(item_idx, t).Data)
 
     return ele_data
 
@@ -596,7 +497,7 @@ def _item_aggregate_stats(dfsu_object, item_name, item_info, return_max=True,
 
     for tstep in range(tstep_start, tstep_end):
         # Iterate tstep in time range
-        item_data = _dotnet_arr_to_ndarr(dfsu_object.ReadItemTimeStep(item_idx, tstep).Data)
+        item_data = _utils.dotnet_arr_to_ndarr(dfsu_object.ReadItemTimeStep(item_idx, tstep).Data)
 
         # Determine elements to update
         if return_max:
@@ -610,7 +511,7 @@ def _item_aggregate_stats(dfsu_object, item_name, item_info, return_max=True,
 
         # Update current_dir if specified
         if current_dir:
-            cd_data = _dotnet_arr_to_ndarr(dfsu_object.ReadItemTimeStep(cd_index, tstep).Data)
+            cd_data = _utils.dotnet_arr_to_ndarr(dfsu_object.ReadItemTimeStep(cd_index, tstep).Data)
             update_cd_elements = cd_data[comp_boolean]
             cd_ele_data[comp_boolean] = update_cd_elements
 
