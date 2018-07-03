@@ -1,6 +1,6 @@
 """Raster interpolation functions
 
-Depends on gdal
+Depends on GDAL/OGR
 """
 
 # Author: Robert Wall
