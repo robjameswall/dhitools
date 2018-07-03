@@ -315,6 +315,41 @@ class Mesh(object):
         # Close file
         dfsu_file.Close()
 
+    def plot_mesh(self, fill=False, kwargs=None):
+        """
+        Plot triangular mesh with triplot or tricontourf.
+
+        See matplotlib kwargs for respective additional plot arguments.
+
+        Parameters
+        ----------
+        fill : boolean
+            if True, plots filled contour mesh (tricontourf)
+            if False, plots (x, y) triangular mesh (triplot)
+        kwargs : dict
+            Additional arguments supported by triplot/tricontourf
+
+        Returns
+        -------
+        fig : matplotlib figure obj
+        ax : matplotlib axis obj
+
+        See Also
+        --------
+        https://matplotlib.org/api/_as_gen/matplotlib.pyplot.triplot.html
+        https://matplotlib.org/api/_as_gen/matplotlib.pyplot.tricontourf.html
+
+        """
+        if fill:
+            fig, ax = _filled_mesh_plot(self.nodes[:,0], self.nodes[:,1],
+                                        self.nodes[:,2], self.element_table,
+                                        kwargs)
+        else:
+            fig, ax = _mesh_plot(self.nodes[:,0], self.nodes[:,1],
+                                 self.element_table, kwargs)
+
+        return fig, ax
+
 
 def _dfsu_builder(mesh_path):
     mesh_class = dfs.mesh.MeshFile()
@@ -474,3 +509,37 @@ def _write_mesh(filename, nodes, node_id,
 
         # Elements
         np.savetxt(target, ele_write_fmt, fmt='%i', newline='\n', delimiter=' ')
+
+
+def _mesh_plot(x, y, element_table, kwargs=None):
+    """ Triplot of the mesh """
+    if kwargs is None:
+        kwargs = {}
+
+    import matplotlib.pyplot as plt
+    import matplotlib.tri as tri
+
+    # Subtract 1 from element table to align with Python indexing
+    t = tri.Triangulation(x, y, element_table-1)
+
+    fig, ax = plt.subplots()
+    ax.triplot(t, **kwargs)
+
+    return fig, ax
+
+
+def _filled_mesh_plot(x, y, z, element_table, kwargs=None):
+    """ Tricontourf of the mesh and input z"""
+    if kwargs is None:
+        kwargs = {}
+
+    import matplotlib.pyplot as plt
+    import matplotlib.tri as tri
+
+    # Subtract 1 from element table to align with Python indexing
+    t = tri.Triangulation(x, y, element_table-1)
+
+    fig, ax = plt.subplots()
+    ax.tricontourf(t, z, **kwargs)
+
+    return fig, ax
