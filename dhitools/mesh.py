@@ -4,6 +4,8 @@
 # Author: Robert Wall
 
 import numpy as np
+import geopandas as gpd
+import datetime as dt
 from dotenv import load_dotenv, find_dotenv
 import os
 import clr
@@ -12,11 +14,14 @@ import clr
 load_dotenv(find_dotenv())
 sdk_path = os.getenv('MIKE_SDK')
 dfs_dll = os.getenv('MIKE_DFS')
+eum_dll = os.getenv('MIKE_EUM')
 clr.AddReference(os.path.join(sdk_path, dfs_dll))
+clr.AddReference(os.path.join(sdk_path, eum_dll))
 clr.AddReference('System')
 
 # Import .NET libraries
 import DHI.Generic.MikeZero.DFS as dfs
+from DHI.Generic.MikeZero import eumUnit, eumItem, eumQuantity
 import System
 from System import Array
 
@@ -73,6 +78,7 @@ class Mesh(object):
         self.filename = filename
         self._file_input = False
         self.zUnitKey = 1000  # Default value (1000 = meter)
+        self.lyrs = {}  # Dict for model input layers ie. roughness
 
         if filename is not None:
             self.read_mesh()
@@ -142,6 +148,8 @@ class Mesh(object):
     def interpolate_rasters(self, raster_list, method='nearest'):
         '''
         Interpolate multiple raster elevations to mesh nodes
+
+        Depends on GDAL/OGR
         '''
         import _raster_interpolate as _ri
 
@@ -163,23 +171,162 @@ class Mesh(object):
             # Update mesh obj nodes only where node was interpolated
             self.nodes[:, 3][updated_bool] = only_updated_z
 
+    def to_gpd(self, elements=True, output_shp=None):
+        '''
+        Export mesh elements or nodes to GeoDataFrame with option to write to
+        shape file
+
+        Parameters
+        ----------
+        elements : boolean
+            if True, export element points
+            if False, export nodes points
+        output_shp : str, optional
+            output path to write to .shp file
+
+        Returns
+        -------
+        mesh_df : GeoDataFrame, shape (nrows, 2)
+            Geopandas df with field for element or node id if specified
+        '''
+
+        from shapely.geometry import Point
+        import pycrs
+
+        # Sort input depending on elements or nodes
+        if elements:
+            field_name = 'Ele_num'
+            point_data = self.elements
+            point_id = self.element_ids
+        else:
+            field_name = 'Node_num'
+            point_data = self.nodes
+            point_id = self.node_ids
+
+        # Create geometry series from points
+        mesh_points = [Point(pt[0], pt[1]) for pt in point_data]
+        mesh_series = gpd.GeoSeries(mesh_points)
+
+        # Create GeoDataframe
+        mesh_df = gpd.GeoDataFrame(point_id, geometry=mesh_series,
+                                   columns=[field_name])
+
+        # Set crs
+        proj4_crs = pycrs.parser.from_ogc_wkt(self.projection).to_proj4()
+        mesh_df.crs = proj4_crs
+
+        if output_shp is not None:
+            mesh_df.to_file(output_shp)
+
+        return mesh_df
+
+    def lyr_from_shape(self, lyr_name, input_shp, field_attribute,
+                       output_shp=None):
+        """
+        Create a model input layer at mesh element coordinates.
+
+        For example, input_shp is a roughness map containing polygons with
+        roughness values. A spatial join  is performed for mesh element points
+        within input_shp polygons and returns field_attributeat element points.
+
+        Parameters
+        ----------
+        lyr_name : str
+            Layer name as key to `lyrs` attribute dictionary
+        input_shp : str
+            Path to input shape file
+        field_attributes : str
+            Attribute in `input_shp` to extract at mesh elements
+        output_shp : str, optional
+            output path to write to .shp file
+
+        Returns
+        -------
+        Inserts `lyr_name` into the `lyrs` attribute dictionary as an ndarray,
+        shape (num_elements,) with extracted `field_attributes` value for each
+        mesh element
+        """
+
+        # Load input_shp to GeoDF
+        input_df = gpd.read_file(input_shp)
+
+        # Load mesh element points as GeoDF
+        mesh_df = self.to_gpd()
+
+        # Perform spatial join
+        join_df = gpd.sjoin(mesh_df, input_df, how='left', op='within')
+        self.lyrs[lyr_name] = np.array(join_df[field_attribute])
+
+        if output_shp is not None:
+            join_df.to_file(output_shp)
+
+    def lyr_to_dfsu(self, lyr_name, output_dfsu):
+        """
+        Create model layer .dfsu file `lyr` attribute. References `lyrs`
+        attribute dictionary as value at element coordinates to write to
+        .dfsu file.
+
+        See also `lyr_from_shape`.
+
+        Parameters
+        ----------
+        lyr_name : str
+            Layer name as key to `lyrs` attribute dictionary
+        output_dfsu : str
+            Path to output .dfsu file
+
+        Returns
+        -------
+        weights : array, shape (n_components,)
+
+        """
+        # Check that lyr_name is correct
+        assert self.lyrs[lyr_name].shape[0] == self.num_elements, \
+            "Length of input layer must equal number of mesh elements"
+
+        # Load mesh file and mesh object
+        mesh_class = dfs.mesh.MeshFile()
+        dhi_mesh = mesh_class.ReadMesh(self.filename)
+
+        # Call dfsu builder
+        builder = dfs.dfsu.DfsuBuilder.Create(dfs.dfsu.DfsuFileType.Dfsu2D)
+        builder.SetFromMeshFile(dhi_mesh)
+
+        # Create arbitrary date and timestep; this is not a dynamic dfsu
+        date = dt.datetime(2018, 1, 1, 0, 0, 0, 0)
+        time_step = 1.0
+        builder.SetTimeInfo(System.DateTime(date.year, date.month, date.day),
+                            time_step)
+
+        # Create dfsu attribute
+        builder.AddDynamicItem(lyr_name,
+                               eumQuantity(eumItem.eumIManningsM,
+                                           eumUnit.eumUMeter2One3rdPerSec))
+
+        # Create file
+        dfsu_file = builder.CreateFile(output_dfsu)
+
+        # Add lyr_name values
+        net_arr = Array.CreateInstance(System.Single, self.num_elements)
+        for i, val in enumerate(self.lyrs[lyr_name]):
+            net_arr[i] = val
+        dfsu_file.WriteItemTimeStepNext(0, net_arr)
+
+        # Close file
+        dfsu_file.Close()
+
+
+def _dfsu_builder(mesh_path):
+    mesh_class = dfs.mesh.MeshFile()
+    dhi_mesh = mesh_class.ReadMesh(mesh_path)
+
+    # Call dfsu builder
+    builder = dfs.dfsu.DfsuBuilder.Create(dfs.dfsu.DfsuFileType.Dfsu2D)
+    builder.SetFromMeshFile(dhi_mesh)
+
 
 def _read_mesh(dfs_obj):
-    """
-    Function description...
-
-    Parameters
-    ----------
-    input_1 : dtype, shape (n_components,)
-        input_1 description...
-    input_2 : int
-        input_2 description...
-
-    Returns
-    -------
-    weights : array, shape (n_components,)
-
-    """
+    """ See Mesh class description for output details """
     num_nodes = dfs_obj.NumberOfNodes
     num_elements = dfs_obj.NumberOfElements
 
@@ -257,21 +404,7 @@ def _node_table(num_nodes, num_elements, ele_table):
 
 
 def _mesh_element_coordinates(element_tables, nodes):
-    """
-    Calc element coordinates from element_table and nodes
-
-    Parameters
-    ----------
-    input_1 : dtype, shape (n_components,)
-        input_1 description...
-    input_2 : int
-        input_2 description...
-
-    Returns
-    -------
-    weights : array, shape (n_components,)
-
-    """
+    """ Manual method to calc element coords from ele table and node coords"""
     # Node coords
     xn = nodes[:, 0]
     yn = nodes[:, 1]
@@ -289,21 +422,8 @@ def _mesh_element_coordinates(element_tables, nodes):
 
 
 def _dfsu_element_coordinates(dfsu_object):
-    """
-    Use MIKE SDK method to calc element coords from dfsu_object
+    """ Use MIKE SDK method to calc element coords from dfsu_object """
 
-    Parameters
-    ----------
-    input_1 : dtype, shape (n_components,)
-        input_1 description...
-    input_2 : int
-        input_2 description...
-
-    Returns
-    -------
-    weights : array, shape (n_components,)
-
-    """
     element_coordinates = np.zeros(shape=(dfsu_object.NumberOfElements, 3))
 
     # Convert nodes to .NET System double to input to method
@@ -327,21 +447,7 @@ def _dfsu_element_coordinates(dfsu_object):
 def _write_mesh(filename, nodes, node_id,
                 node_boundary_code, element_table,
                 element_ids, proj, zUnitKey=1000):
-    """
-    Function description...
-
-    Parameters
-    ----------
-    input_1 : dtype, shape (n_components,)
-        input_1 description...
-    input_2 : int
-        input_2 description...
-
-    Returns
-    -------
-    weights : array, shape (n_components,)
-
-    """
+    """ See Mesh class description for input details """
 
     eum_type = 100079  # Specify item type as 'bathymetry' (MIKE convention)
     num_nodes = len(nodes)
