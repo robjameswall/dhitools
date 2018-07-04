@@ -254,6 +254,19 @@ class Dfsu(mesh.Mesh):
         else:
             return min_ele
 
+    def plot_item(self, item_name, tstep, kwargs=None):
+
+        # Get item_data and reshape from (N,1) to (N,) because of single
+        # timestep. tricontourf prefers (N,)
+        item_data = self.item_node_data(item_name, tstep)
+        item_data = np.reshape(item_data, self.num_nodes)
+
+        fig, ax = mesh._filled_mesh_plot(self.nodes[:,0], self.nodes[:,1],
+                                         item_data, self.element_table,
+                                         kwargs)
+
+        return fig, ax
+
 
 def _dfsu_info(dfsu_object):
     """
@@ -336,6 +349,8 @@ def _node_data(dfsu_object, item_name, item_info,
     node_data = np.zeros(shape=(len(node_cords), ele_data.shape[1]))
     for i in range(ele_data.shape[1]):
         node_data[:,i] = _map_ele_to_node(node_table, ele_cords, node_cords, ele_data[:,i])
+
+
 
     return node_data
 
