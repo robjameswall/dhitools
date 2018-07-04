@@ -154,10 +154,11 @@ class Mesh(object):
         import _raster_interpolate as _ri
 
         for r in raster_list:
-            interp_z = _ri.interpolate_from_raster(r, self.nodes[:, 1:3], method)
+            interp_z = _ri.interpolate_from_raster(r, self.nodes[:, :2], method)
 
             # Just consider nodes that overlay raster
-            updated_z = np.column_stack((self.nodes[:, 0], interp_z))
+            # Prepend node_ids
+            updated_z = np.column_stack((self.node_ids, interp_z))
 
             # Sort by node_id
             updated_z_sorted = updated_z[updated_z[:, 0].argsort()]
@@ -169,7 +170,7 @@ class Mesh(object):
             only_updated_z = updated_z_sorted[:, 1][~np.isnan(updated_z_sorted[:, 1])]
 
             # Update mesh obj nodes only where node was interpolated
-            self.nodes[:, 3][updated_bool] = only_updated_z
+            self.nodes[:, 2][updated_bool] = only_updated_z
 
     def to_gpd(self, elements=True, output_shp=None):
         '''
@@ -341,14 +342,17 @@ class Mesh(object):
 
         """
         if fill:
-            fig, ax = _filled_mesh_plot(self.nodes[:,0], self.nodes[:,1],
-                                        self.nodes[:,2], self.element_table,
-                                        kwargs)
+            fig, ax, tf = _filled_mesh_plot(self.nodes[:,0],
+                                            self.nodes[:,1],
+                                            self.nodes[:,2],
+                                            self.element_table,
+                                            kwargs)
+            return fig, ax, tf
+
         else:
             fig, ax = _mesh_plot(self.nodes[:,0], self.nodes[:,1],
                                  self.element_table, kwargs)
-
-        return fig, ax
+            return fig, ax
 
 
 def _dfsu_builder(mesh_path):
@@ -540,6 +544,6 @@ def _filled_mesh_plot(x, y, z, element_table, kwargs=None):
     t = tri.Triangulation(x, y, element_table-1)
 
     fig, ax = plt.subplots()
-    ax.tricontourf(t, z, **kwargs)
+    tf = ax.tricontourf(t, z, **kwargs)
 
-    return fig, ax
+    return fig, ax, tf

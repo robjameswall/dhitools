@@ -261,11 +261,11 @@ class Dfsu(mesh.Mesh):
         item_data = self.item_node_data(item_name, tstep)
         item_data = np.reshape(item_data, self.num_nodes)
 
-        fig, ax = mesh._filled_mesh_plot(self.nodes[:,0], self.nodes[:,1],
-                                         item_data, self.element_table,
-                                         kwargs)
+        fig, ax, tf = mesh._filled_mesh_plot(self.nodes[:,0], self.nodes[:,1],
+                                             item_data, self.element_table,
+                                             kwargs)
 
-        return fig, ax
+        return fig, ax, tf
 
 
 def _dfsu_info(dfsu_object):
