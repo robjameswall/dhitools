@@ -5,8 +5,8 @@ Author: Robert Wall
 """
 
 import numpy as np
-import mesh
-import _utils
+from . import mesh
+from . import _utils
 from dotenv import load_dotenv, find_dotenv
 import os
 import clr

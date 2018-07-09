@@ -25,7 +25,7 @@ from DHI.Generic.MikeZero import eumUnit, eumItem, eumQuantity
 import System
 from System import Array
 
-import _utils
+from . import _utils
 
 
 class Mesh(object):
@@ -151,7 +151,7 @@ class Mesh(object):
 
         Depends on GDAL/OGR
         '''
-        import _raster_interpolate as _ri
+        from . import _raster_interpolate as _ri
 
         for r in raster_list:
             interp_z = _ri.interpolate_from_raster(r, self.nodes[:, :2], method)
