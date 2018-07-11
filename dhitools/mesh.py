@@ -86,6 +86,11 @@ class Mesh(object):
     def read_mesh(self, filename=None):
         '''
         Read in .mesh file
+
+        Parameters
+        ----------
+        filename : str
+            File path to .mesh file
         '''
         if filename is None:
             filename = self.filename
@@ -135,6 +140,12 @@ class Mesh(object):
     def write_mesh(self, output_name):
         '''
         Write new mesh file
+
+        Parameters
+        ----------
+        output_name : str
+            File path to write node (x, y, z) to .mesh file
+            Include .mesh at the end of string
         '''
         _write_mesh(filename=output_name,
                     nodes=self.nodes,
@@ -149,7 +160,30 @@ class Mesh(object):
         '''
         Interpolate multiple raster elevations to mesh nodes
 
-        Depends on GDAL/OGR
+        Parameters
+        ----------
+        raster_list : list
+            List of filepaths to each raster to interpolate from
+            Order listed will be order in which interpolation is performed
+        method : str
+            'nearest' or 'linear'
+
+        Returns
+        -------
+        Updates mesh.nodes z coordinates
+
+        See Also
+        --------
+        Interpolation methods:
+
+        https://docs.scipy.org/doc/scipy-0.14.0/reference/generated/
+        scipy.interpolate.NearestNDInterpolator.html#scipy.interpolate.
+        NearestNDInterpolator
+
+        https://docs.scipy.org/doc/scipy-0.14.0/reference/generated/
+        scipy.interpolate.LinearNDInterpolator.html#scipy.interpolate.
+        LinearNDInterpolator
+
         '''
         from . import _raster_interpolate as _ri
 
@@ -321,6 +355,8 @@ class Mesh(object):
         Plot triangular mesh with triplot or tricontourf.
 
         See matplotlib kwargs for respective additional plot arguments.
+
+        **Warning**: if mesh is large performance will be poor
 
         Parameters
         ----------

@@ -255,6 +255,28 @@ class Dfsu(mesh.Mesh):
             return min_ele
 
     def plot_item(self, item_name, tstep, kwargs=None):
+        """
+        Plot triangular mesh with tricontourf for input item and timestep
+
+        **Warning**: if mesh is large performance will be poor
+
+        Parameters
+        ----------
+        item_name : str
+            Specified item to return element data. Item names are found in
+            the `Dfsu.items` attribute.
+        tstep : int
+            Specify time step for node data. Timesteps begin from 0.
+        kwargs : dict
+            Additional arguments supported by tricontourf
+
+        Returns
+        -------
+        fig : matplotlib figure obj
+        ax : matplotlib axis obj
+        tf : tricontourf obj
+
+        """
 
         # Get item_data and reshape from (N,1) to (N,) because of single
         # timestep. tricontourf prefers (N,)

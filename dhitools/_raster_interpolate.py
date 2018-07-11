@@ -16,19 +16,27 @@ def raster_details(input_raster):
     Read GDAL supported raster format with elevation data in first band and
     return details:
 
-    Inputs:
-        input_raster: full path to raster
+    Parameters
+    ----------
+    input_raster : str
+        filepath to raster
 
-    Outputs:
-        xres: x grid spacing
-        yres: y grid spacing
-        xmin: smallest x value
-        xmax: largest x value
-        ymin: smallest y value
-        ymax: largest y value
-        x_size: number of x columns
-        y_size: number of y rows
-        nodata: raster nodata value
+    Returns
+    -------
+    xres : int
+        x grid spacing
+    yres : int
+        y grid spacing
+    xmin : int
+        smallest x value
+    ymin : int
+        smallest y value
+    x_size : int
+        number of x columns
+    y_size : int
+        number of y columns
+    nodata : int
+        value assigned to nodata
     '''
     raster = gdal.Open(input_raster)
     ulx, xres, xskew, uly, yskew, yres = raster.GetGeoTransform()
@@ -48,14 +56,20 @@ def raster_XYZ(input_raster):
     '''
     Read GDAL supported raster format with elevation data in first band and
     return data as np array:
+    
+    Parameters
+    ----------
+    input_raster : str
+        filepath to raster
 
-    Inputs:
-        input_raster: full path to raster
-
-    Outputs:
-        x: 1d array of raster x values
-        y: 1d array of raster y values
-        XYZ: X,Y,Z meshgrids shape = [3, meshgrid(x, y)]
+    Returns
+    -------
+    x : ndarray
+        Raster x values
+    y : ndarray
+        Raster y values
+    XYZ : ndarray, shape (3, meshgrid(x, y))
+        Meshgrids of X, Y, Z
     '''
     xres, yres, xmin, xmax, ymin, ymax, x_size, y_size, nodata = raster_details(input_raster)
     x = np.linspace(xmin, xmax, x_size)
@@ -74,12 +88,23 @@ def interpolate_from_raster(input_raster, xy_array_to_interpolate,
     '''
     Interpolate input_raster to xy array.
 
+    Parameters
+    ----------
+    input_raster : str
+        filepath to raster
+    xy_array : ndarray, shape (num_x, num_y)
+        Node values to interpolate z at
+    
+    Returns
+    -------
+    interp_z : ndarray, shape (len(xy_array))
+        Interpolated z values as xy_array (x, y)
+
+    See Also
+    --------
+
     See scipy.interpolate.RegularGridInterpolator documentation for further
     details.
-
-    Inputs:
-        input_raster: full file path to GDAL supported raster
-        xy_array: 2d array [x, y] of node values to interpolate elevation
     '''
     x_raster, y_raster, raster_grid = raster_XYZ(input_raster)
     interp_f = RegularGridInterpolator((y_raster, x_raster),
