@@ -373,7 +373,6 @@ def _node_data(dfsu_object, item_name, item_info,
         node_data[:,i] = _map_ele_to_node(node_table, ele_cords, node_cords, ele_data[:,i])
 
 
-
     return node_data
 
 
