@@ -158,7 +158,7 @@ class Dfsu(mesh.Mesh):
         return node_data
 
     def max_item(self, item_name, tstep_start=None, tstep_end=None,
-                 current_dir=False):
+                 current_dir=False, node=False):
         """
         Calculate maximum element value for specified item over entire model or
         within specific range of timesteps.
@@ -179,6 +179,8 @@ class Dfsu(mesh.Mesh):
         current_dir : boolean
             If True, returns corresponding current direction value occuring at
             the maxmimum of specified `item_name`.
+        node : boolean, optional
+            If True, returns item data at node rather than element
 
         Returns
         -------
@@ -192,7 +194,18 @@ class Dfsu(mesh.Mesh):
         max_current_dir : ndarray, shape (num_elements,)
             Current direction corresponding to `max_ele`
 
+        if `node` is True
+        min_node : ndarray, shape (num_nodes,)
+            Minimum node values for specified item
+
+        If `node` and `current_dir` are True
+        min_node : ndarray, shape (num_nodes,)
+            Minimum node values for specified item
+        min_current_dir : ndarray, shape (num_elements,)
+            Current direction corresponding to `min_node`
+
         """
+
         dfsu_object = dfs.DfsFileFactory.DfsuFileOpen(self.filename)
         max_ele = _item_aggregate_stats(dfsu_object, item_name,
                                         self.items, tstep_start=tstep_start,
@@ -200,13 +213,38 @@ class Dfsu(mesh.Mesh):
                                         current_dir=current_dir)
         dfsu_object.Close()
 
-        if current_dir:
-            return max_ele[0], max_ele[1]
+        # Return either element data or convert to node if specified
+        if node:
+            if current_dir:
+                me = max_ele[0]
+                cd = max_ele[1]
+            else:
+                me = max_ele
+
+            # Max element item to node
+            max_node = _map_ele_to_node(node_table=self.node_table,
+                                        element_coordinates=self.elements,
+                                        node_coordinates=self.nodes,
+                                        element_data=me)
+            # Current at element to node
+            if current_dir:
+                cd_node = _map_ele_to_node(node_table=self.node_table,
+                                           element_coordinates=self.elements,
+                                           node_coordinates=self.nodes,
+                                           element_data=cd)
+
+                return max_node, cd_node
+            else:
+                return max_node
+
         else:
-            return max_ele
+            if current_dir:
+                return max_ele[0], max_ele[1]
+            else:
+                return max_ele
 
     def min_item(self, item_name, tstep_start=None, tstep_end=None,
-                 current_dir=False):
+                 current_dir=False, node=False):
         """
         Calculate minimum element value for specified item over entire model or
         within specific range of timesteps.
@@ -227,6 +265,8 @@ class Dfsu(mesh.Mesh):
         current_dir : boolean
             If True, returns corresponding current direction value occuring at
             the maxmimum of specified `item_name`.
+        node : boolean, optional
+            If True, returns item data at node rather than element
 
         Returns
         -------
@@ -237,8 +277,18 @@ class Dfsu(mesh.Mesh):
         If `current_dir` is True
         min_ele : ndarray, shape (num_elements,)
             Minimum elements values for specified item
-        max_current_dir : ndarray, shape (num_elements,)
+        min_current_dir : ndarray, shape (num_elements,)
             Current direction corresponding to `min_ele`
+
+        if `node` is True
+        min_node : ndarray, shape (num_nodes,)
+            Minimum node values for specified item
+
+        If `node` and `current_dir` are True
+        min_node : ndarray, shape (num_nodes,)
+            Minimum node values for specified item
+        min_current_dir : ndarray, shape (num_elements,)
+            Current direction corresponding to `min_node`
 
         """
 
@@ -249,10 +299,35 @@ class Dfsu(mesh.Mesh):
                                         current_dir=current_dir)
         dfsu_object.Close()
 
-        if current_dir:
-            return min_ele[0], min_ele[1]
+        # Return either element data or convert to node if specified
+        if node:
+            if current_dir:
+                me = min_ele[0]
+                cd = min_ele[1]
+            else:
+                me = min_ele
+
+            # Max element item to node
+            min_node = _map_ele_to_node(node_table=self.node_table,
+                                        element_coordinates=self.elements,
+                                        node_coordinates=self.nodes,
+                                        element_data=me)
+            # Current at element to node
+            if current_dir:
+                cd_node = _map_ele_to_node(node_table=self.node_table,
+                                           element_coordinates=self.elements,
+                                           node_coordinates=self.nodes,
+                                           element_data=cd)
+
+                return min_node, cd_node
+            else:
+                return min_node
+
         else:
-            return min_ele
+            if current_dir:
+                return min_ele[0], min_ele[1]
+            else:
+                return min_ele
 
     def plot_item(self, item_name, tstep, kwargs=None):
         """
