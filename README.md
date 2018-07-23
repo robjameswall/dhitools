@@ -7,7 +7,7 @@ Features:
 * Interpolate multiple raster DEMs directly to `.mesh` file
 * Read and analyse `.dfsu` model outputs
 * Create `.dfsu` roughness map directly from `.shp` and `.mesh`
-* Read `.dfs0`, `.dfs1`, `.dfsu` files
+* Read `.dfs0`, `.dfs1`, `.dfsu` files (coming soon)
 
 Due to depending on the MIKE SDK `DLL` libraries only Windows is supported.
 
