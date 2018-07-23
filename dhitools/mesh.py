@@ -290,6 +290,11 @@ class Mesh(object):
 
         # Perform spatial join
         join_df = gpd.sjoin(mesh_df, input_df, how='left', op='within')
+
+        # Drop duplicated points; there is the potential to have duplicated
+        # points when they intersect two different polygons. Keep the first
+        join_df = join_df[~join_df.index.duplicated(keep='first')]
+
         self.lyrs[lyr_name] = np.array(join_df[field_attribute])
 
         if output_shp is not None:
