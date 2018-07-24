@@ -6,15 +6,14 @@
 import numpy as np
 import geopandas as gpd
 import datetime as dt
-from dotenv import load_dotenv, find_dotenv
 import os
 import clr
+from . import config
 
 # Set path to MIKE SDK
-load_dotenv(find_dotenv())
-sdk_path = os.getenv('MIKE_SDK')
-dfs_dll = os.getenv('MIKE_DFS')
-eum_dll = os.getenv('MIKE_EUM')
+sdk_path = config.MIKE_SDK
+dfs_dll = config.MIKE_DFS
+eum_dll = config.MIKE_EUM
 clr.AddReference(os.path.join(sdk_path, dfs_dll))
 clr.AddReference(os.path.join(sdk_path, eum_dll))
 clr.AddReference('System')

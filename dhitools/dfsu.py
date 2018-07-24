@@ -7,14 +7,13 @@ Author: Robert Wall
 import numpy as np
 from . import mesh
 from . import _utils
-from dotenv import load_dotenv, find_dotenv
+from . import config
 import os
 import clr
 
 # Set path to MIKE SDK
-load_dotenv(find_dotenv())
-sdk_path = os.getenv('MIKE_SDK')
-dfs_dll = os.getenv('MIKE_DFS')
+sdk_path = config.MIKE_SDK
+dfs_dll = config.MIKE_DFS
 clr.AddReference(os.path.join(sdk_path, dfs_dll))
 clr.AddReference('System')
 
