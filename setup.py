@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='dhitools',
-    version='0.0.2',
+    version='0.0.3',
     description='Python tools for working with DHI MIKE21',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
@@ -22,11 +22,9 @@ setup(
     install_requires=[
         "numpy == 1.14.5",
         "pythonnet==2.3.0",
-        "python-dotenv==0.8.2",
         "PyCRS==0.1.3",
         "scipy==1.1.0"
     ],
-    data_files=['.env'],
     extras_requires={
         'gis': ["GDAL==2.2.4",
                 "geopandas==0.3.0"]
