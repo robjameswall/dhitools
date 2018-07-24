@@ -97,3 +97,6 @@ test_files/
 tool_test.py
 dev*.ipynb
 dev*.py
+
+# Batch files
+*.bat
