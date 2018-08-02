@@ -71,6 +71,9 @@ class Mesh(object):
     Many of these methods have been adapated from the DHI MATLAB Toolbox:
         https://www.mikepoweredbydhi.com/download/mike-by-dhi-tools/
         coastandseatools/dhi-matlab-toolbox
+    Method grid_res()
+        Grid interpolation paramters which have additional attributes
+        if calculated
     """
 
     def __init__(self, filename=None):
@@ -78,6 +81,11 @@ class Mesh(object):
         self._file_input = False
         self.zUnitKey = 1000  # Default value (1000 = meter)
         self.lyrs = {}  # Dict for model input layers ie. roughness
+
+        # Grid interpolation flags [see method grid_res()]
+        self._grid_calc = False
+        self._grid_res = None
+        self._grid_node = None
 
         if filename is not None:
             self.read_mesh()
@@ -394,29 +402,34 @@ class Mesh(object):
                                  self.element_table, kwargs)
             return fig, ax
 
-    def gridded_domain(self, res=1000, nodes=True):
+    def grid_res(self, res, nodes=True):
         """
-        Calculate (x, y) meshgrid for input node or elements coordinates.
+        Calculate grid parameters at specified resolution for either nodes or
+        element coordinates. These parameters are used for interpolating
+        node or element values to regular spaced grids efficiently.
 
         Parameters
         ----------
         res : int
-            Grid resolution
+            grid resolution
         nodes : bool
-            if True, use node coordinates to determine grid limits
-            else, use element coordinates
+            If True, use node coordinates as input
+            Else, use element coordinates
 
         Returns
         -------
+        Updates the following class attributes:
+
         grid_x : ndarray, shape (len_xgrid, len_ygrid)
-            X grid
+            x grid at specified resolution
         grid_y : ndarray, shape (len_xgrid, len_ygrid)
-            Y grid
-
-        See Also
-        --------
-        numpy.meshgrid
-
+            y grid at specified resolution
+        grid_vertices : ndarray, shape (num_nodes/elements, 3)
+            vertices for triangulation applied to (x, y) for input to
+            interpolation
+        grid_weights : ndarray, shape (num_nodes/elements, 3)
+            weights for grid_x and grid_y based on unstructured node/element
+            (x,y). Input for interpolation.
 
         """
         from . import _gridded_interpolate as _gi
@@ -428,9 +441,20 @@ class Mesh(object):
             x = self.elements[:,0]
             y = self.elements[:,1]
 
-        grid_x, grid_y = _gi.dfsu_XY_meshgrid(x, y, res=res)
+        # Gridded (x, y)
+        self.grid_x, self.grid_y = _gi.dfsu_XY_meshgrid(x, y, res=res)
 
-        return grid_x, grid_y
+        # Interpolation vertices and weights
+        all_gridded_points = np.column_stack((self.grid_x.flatten(),
+                                              self.grid_y.flatten()))
+        xy = np.column_stack((x, y))
+        self.grid_vertices, self.grid_weights = _gi.interp_weights(xy,
+            all_gridded_points)
+
+        # Update grid calculations flag
+        self._grid_calc = True
+        self._grid_res = res
+        self._grid_node = nodes
 
 
 def _dfsu_builder(mesh_path):
