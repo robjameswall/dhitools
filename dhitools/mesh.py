@@ -448,7 +448,8 @@ class Mesh(object):
         all_gridded_points = np.column_stack((self.grid_x.flatten(),
                                               self.grid_y.flatten()))
         xy = np.column_stack((x, y))
-        self.grid_vertices, self.grid_weights = _gi.interp_weights(xy,
+        self.grid_vertices, self.grid_weights = _gi.interp_weights(
+            xy,
             all_gridded_points)
 
         # Update grid calculations flag
