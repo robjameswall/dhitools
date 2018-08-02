@@ -457,6 +457,73 @@ class Mesh(object):
         self._grid_res = res
         self._grid_node = nodes
 
+    def mask(self):
+        """
+        Function description...
+
+        Parameters
+        ----------
+        input_1 : dtype, shape (n_components,)
+            input_1 description...
+        input_2 : int
+            input_2 description...
+
+        Returns
+        -------
+        weights : array, shape (n_components,)
+
+        """
+
+        # Select boundary nodes
+        nb_idx = self.node_ids[self.node_boundary_codes != 0]
+
+        # Determine boundary edges
+        be_idx = _determine_boundary_edges_idx(nb_idx, self.element_table)
+
+        # Order and seperate boundary edges in to respective polygons
+        all_polygons = _extract_all_polygons(be_idx)
+
+        # Determine polygon coordinates
+        all_poly_coords = _polygon_coords(self.nodes, all_polygons)
+
+        # Create mesh mask as polygon object
+        poly_mask = _polygon_mask(all_poly_coords)
+
+        return poly_mask
+
+    def boolean_mask(self, res=1000, mesh_mask=None):
+        """
+        Function description...
+
+        Parameters
+        ----------
+        input_1 : dtype, shape (n_components,)
+            input_1 description...
+        input_2 : int
+            input_2 description...
+
+        Returns
+        -------
+        weights : array, shape (n_components,)
+
+        """
+        from . import _gridded_interpolate as _gi
+        from shapely.geometry import Point
+
+        if mesh_mask is None:
+            mesh_mask = self.mask()
+
+        # Create (x,y) grid at input resolution
+        X, Y = _gi.dfsu_XY_meshgrid(self.nodes[:,0], self.nodes[:,1], res=res)
+
+        # Create boolean mask
+        bool_mask = []
+        for xp, yp in zip(X.ravel(), Y.ravel()):
+            bool_mask.append(Point(xp, yp).within(mesh_mask))
+        bool_mask = np.array(bool_mask)
+
+        return bool_mask
+
 
 def _dfsu_builder(mesh_path):
     mesh_class = dfs.mesh.MeshFile()
@@ -650,3 +717,106 @@ def _filled_mesh_plot(x, y, z, element_table, kwargs=None):
     tf = ax.tricontourf(t, z, **kwargs)
 
     return fig, ax, tf
+
+
+"""
+mesh mask
+"""
+
+
+def _determine_boundary_edges_idx(nb_idx, element_table):
+    # Get all element edges
+    all_edges = element_table[:, [0, 1, 1, 2, 2 , 0]]
+    all_edges = all_edges.reshape((-1, 2))
+    all_edges = np.sort(all_edges)
+
+    # Select only edges that occurr once; these are potential
+    # boundary edges
+    unique_edges, edges_count = np.unique(all_edges, axis=0, return_counts=True)
+    non_duplicate_edges = unique_edges[edges_count == 1]
+
+    # Select only edges that have both nodes as boundary nodes
+    # This is probably not needed but will make certain that edges
+    # are boundary edges
+    be_idx = non_duplicate_edges[np.isin(non_duplicate_edges, nb_idx).sum(axis=1) == 2]
+
+    return be_idx
+
+
+def _extract_all_polygons(be_idx):
+    # List to store all polygons
+    all_polygons = []
+
+    # Boolean for if edge has been visited
+    visited = np.zeros(len(be_idx), dtype=bool)
+
+    # Start traversal
+    while not np.all(visited):
+        polygon = []
+
+        # Determine which edges have not been visited
+        remaining_edges = be_idx[~visited]
+
+        # Select starting conditions
+        first_edge = remaining_edges[0]
+        node_start = first_edge[0]
+        node_next = first_edge[1]
+
+        polygon.append(node_start)
+
+        next_edge = [np.nan, np.nan]
+
+        # Loop through all edges in polygon until
+        # we return to the first edge
+        while not np.all(np.equal(first_edge, next_edge)):
+            # Add next node to polygon
+            polygon.append(node_next)
+
+            # Find next edge
+
+            # Edges with start node
+            equal_start_idx = np.argwhere(node_start == be_idx)[:,0]
+            # Edges with next node
+            equal_next_idx = np.argwhere(node_next == be_idx)[:,0]
+
+            # Want edge with next node but not the start node
+            next_edge_idx = equal_next_idx[~np.isin(equal_next_idx, equal_start_idx)]
+            next_edge = be_idx[next_edge_idx]
+
+            # Update node_start
+            node_start = node_next
+            node_next = next_edge[next_edge != node_start][0]
+
+            # Update edge as visited
+            visited[next_edge_idx] = True
+
+        polygon = np.array(polygon)
+        all_polygons.append(polygon)
+
+    return all_polygons
+
+
+def _polygon_coords(nodes, mesh_polygons):
+    poly_coords = []
+    for p in mesh_polygons:
+        poly_coords.append(nodes[p - 1, :2])
+    return poly_coords
+
+
+def _polygon_mask(polygon_coords):
+
+    from shapely.geometry import Polygon
+
+    # Get largest area polygon
+    poly_areas = [Polygon(p).area for p in polygon_coords]
+    max_area_idx = np.argmax(poly_areas)
+
+    # Select largest polygon; this is the boundary
+    max_polygon = polygon_coords[max_area_idx]
+
+    # Drop max area polygon
+    internal_polygons = [p for i, p in enumerate(polygon_coords) if i != max_area_idx]
+
+    boundary_polygon = Polygon(shell=max_polygon, holes=internal_polygons)
+
+    return boundary_polygon
