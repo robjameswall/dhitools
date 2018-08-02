@@ -11,7 +11,7 @@ import scipy.spatial.qhull as qhull
 import numpy as np
 
 
-def _dfsu_to_grid(x, y, z, res=100):
+def dfsu_to_grid(x, y, z, res=100):
     """
     Interpolate (x, y, z) node points to a regular gride at input resolution
 
@@ -29,27 +29,27 @@ def _dfsu_to_grid(x, y, z, res=100):
     Returns
     -------
     interp_z : ndarray, shape (len_xgrid, len_ygrid)
-        Interpolated gridded z. Use _dfsu_XY_meshgrid() to get gridded X and Y
+        Interpolated gridded z. Use dfsu_XY_meshgrid() to get gridded X and Y
 
     """
     # Sort out raster grid
-    grid_x, grid_y = _dfsu_XY_meshgrid(x, y, res)
+    grid_x, grid_y = dfsu_XY_meshgrid(x, y, res)
 
     # Flattern grid to parse through custom interpolation methods
     all_p = np.column_stack((grid_x.flatten(), grid_y.flatten()))
 
     # Compute triangulation weights for node points
     xy = np.column_stack((x, y))
-    vtx, wts = _interp_weights(xy, all_p)
+    vtx, wts = interp_weights(xy, all_p)
 
     # Interpolate points (to flatterned array) and then reshape
-    interp_z_flat = _interpolate(z, vtx, wts)
+    interp_z_flat = interpolate(z, vtx, wts)
     interp_z = np.reshape(interp_z_flat, (grid_x.shape[0], grid_x.shape[1]))
 
     return interp_z
 
 
-def _interp_weights(xy, uv, d=2):
+def interp_weights(xy, uv, d=2):
     """
     Calculate interpolation weights for all xy node points at uv gridded points
 
@@ -81,10 +81,10 @@ def _interp_weights(xy, uv, d=2):
     return vertices, weights
 
 
-def _interpolate(input_z, vertices, weights, fill_value=None):
+def interpolate(input_z, vertices, weights, fill_value=None):
     """
     Interpolate z values to grid using vertices from node triangulation and
-    weights at gridded points (these are from _interp_weights())
+    weights at gridded points (these are from interp_weights())
 
     Parameters
     ----------
@@ -109,7 +109,7 @@ def _interpolate(input_z, vertices, weights, fill_value=None):
     return interp_z
 
 
-def _dfsu_details(x, y):
+def dfsu_details(x, y):
     """
     Get min and max for input x and y ndarrays; shape (num_nodes,)
     """
@@ -122,13 +122,13 @@ def _dfsu_details(x, y):
     return min_x, max_x, min_y, max_y
 
 
-def _dfsu_XY_meshgrid(x, y, res=100):
+def dfsu_XY_meshgrid(x, y, res=100):
     """
     Calculate X and Y meshgrid for input x and y node points.
 
     Returns grid_x ang grid_y of shape (len_xgrid, len_ygrid)
     """
-    min_x, max_x, min_y, max_y = _dfsu_details(x, y)
+    min_x, max_x, min_y, max_y = dfsu_details(x, y)
     grid_x, grid_y = np.meshgrid(np.arange(min_x, max_x, res),
                                  np.arange(min_y, max_y, res))
 
