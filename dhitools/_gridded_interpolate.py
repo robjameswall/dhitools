@@ -24,7 +24,7 @@ def dfsu_to_grid(x, y, z, res=100):
     z : ndarray, shape (num_nodes,)
         z node coordinates
     res : int
-        Gridded resolution
+        Grid resolution
 
     Returns
     -------
