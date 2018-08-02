@@ -394,6 +394,44 @@ class Mesh(object):
                                  self.element_table, kwargs)
             return fig, ax
 
+    def gridded_domain(self, res=1000, nodes=True):
+        """
+        Calculate (x, y) meshgrid for input node or elements coordinates.
+
+        Parameters
+        ----------
+        res : int
+            Grid resolution
+        nodes : bool
+            if True, use node coordinates to determine grid limits
+            else, use element coordinates
+
+        Returns
+        -------
+        grid_x : ndarray, shape (len_xgrid, len_ygrid)
+            X grid
+        grid_y : ndarray, shape (len_xgrid, len_ygrid)
+            Y grid
+
+        See Also
+        --------
+        numpy.meshgrid
+
+
+        """
+        from . import _gridded_interpolate as _gi
+
+        if nodes:
+            x = self.nodes[:,0]
+            y = self.nodes[:,1]
+        else:
+            x = self.elements[:,0]
+            y = self.elements[:,1]
+
+        grid_x, grid_y = _gi.dfsu_XY_meshgrid(x, y, res=res)
+
+        return grid_x, grid_y
+
 
 def _dfsu_builder(mesh_path):
     mesh_class = dfs.mesh.MeshFile()
