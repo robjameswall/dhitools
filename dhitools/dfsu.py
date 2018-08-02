@@ -144,7 +144,7 @@ class Dfsu(mesh.Mesh):
 
         Returns
         -------
-        node_data : ndarray, shape (num_elements,[tstep_end-tstep_start])
+        node_data : ndarray, shape (num_nodes,[tstep_end-tstep_start])
             Node data for specified item and time steps
         """
         dfsu_object = dfs.DfsFileFactory.DfsuFileOpen(self.filename)
@@ -362,6 +362,52 @@ class Dfsu(mesh.Mesh):
                                              kwargs)
 
         return fig, ax, tf
+
+    def gridded_item(self, item_name, tstep_start=None, tstep_end=None,
+                     res=1000):
+        """
+        Function description...
+
+        Parameters
+        ----------
+        input_1 : dtype, shape (n_components,)
+            input_1 description...
+        input_2 : int
+            input_2 description...
+
+        Returns
+        -------
+        weights : array, shape (n_components,)
+
+        """
+
+        from . import _gridded_interpolate as _gi
+
+        # Check that grid parameters have been calculated and if they are,
+        # that they match the specified res
+        assert self._grid_calc is True, \
+            "Must calculate grid parameters first using method grid_res(res)"
+        assert self._grid_res == res, \
+            "Input grid resolution must equal resolution input to grid_res()"
+
+        if self._grid_node:
+            z = self.item_node_data(item_name, tstep_start, tstep_end)
+        else:
+            z = self.item_element_data(item_name, tstep_start, tstep_end)
+
+        # Interpolate z to regular grid
+        num_tsteps = z.shape[1]
+        z_interp = np.zeros(shape=(num_tsteps,
+                                   self.grid_x.shape[0],
+                                   self.grid_x.shape[1]))
+        for i in range(num_tsteps):
+            z_interp_flat = _gi.interpolate(z[:,i], self.grid_vertices,
+                                            self.grid_weights)
+            z_interp_grid = np.reshape(z_interp_flat, (self.grid_x.shape[0],
+                                                       self.grid_y.shape[1]))
+            z_interp[i] = z_interp_grid
+
+        return z_interp
 
 
 def _dfsu_info(dfsu_object):
