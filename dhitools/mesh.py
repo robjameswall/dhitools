@@ -44,7 +44,7 @@ class Mesh(object):
         (x,y,z) coordinate for each node
     elements : ndarray, shape (num_ele, 3)
         (x,y,z) coordinate for each element
-    ele_table : ndarray, shape (num_ele, 3)
+    element_table : ndarray, shape (num_ele, 3)
         Defines for each element the nodes that define the element.
     node_table : ndarray, shape (num_nodes, n)
         Defines for each node the element adjacent to this node. May contain
@@ -459,18 +459,14 @@ class Mesh(object):
 
     def mask(self):
         """
-        Function description...
+        Create a Shapely polygon mesh domain mask.
 
-        Parameters
-        ----------
-        input_1 : dtype, shape (n_components,)
-            input_1 description...
-        input_2 : int
-            input_2 description...
+        Determines mesh boundary from node boundary codes.
 
         Returns
         -------
-        weights : array, shape (n_components,)
+        poly_mask : shapely Polygon object
+            Polygon of the mesh domain.
 
         """
 
@@ -493,18 +489,21 @@ class Mesh(object):
 
     def boolean_mask(self, res=1000, mesh_mask=None):
         """
-        Function description...
+        Create a boolean mask of a regular grid at input resolution indicating
+        if gridded points are within the model mesh.
 
         Parameters
         ----------
-        input_1 : dtype, shape (n_components,)
-            input_1 description...
-        input_2 : int
-            input_2 description...
+        res : int
+            Grid resolution
+        mesh_mask : shapely Polygon object, optional
+            Mesh domain mask output from the method mask(). If this is not
+            provided, it will be created.
 
         Returns
         -------
-        weights : array, shape (n_components,)
+        bool_mask : ndarray, shape (len_xgrid, len_ygrid)
+            Boolean mask covering the regular grid for the mesh domain
 
         """
         from . import _gridded_interpolate as _gi
@@ -725,8 +724,26 @@ mesh mask
 
 
 def _determine_boundary_edges_idx(nb_idx, element_table):
+    """
+    Calculate the unordered mesh boundary edges and returns boundar edge
+    indices.
+
+    Parameters
+    ----------
+    nb_idx : ndarray, shape (num_boundary_nodes,)
+        Boundary node indices
+    element_table : ndarray, shape (num_ele, 3)
+        Defines for each element the nodes that define the element.
+
+    Returns
+    -------
+    be_idx : ndarray, shape (num_boundary_edges, 2)
+        Unordered boundary edges; has [start_node_idx, end_node_idx] for each
+        edge
+
+    """
     # Get all element edges
-    all_edges = element_table[:, [0, 1, 1, 2, 2 , 0]]
+    all_edges = element_table[:, [0, 1, 1, 2, 2, 0]]
     all_edges = all_edges.reshape((-1, 2))
     all_edges = np.sort(all_edges)
 
@@ -744,6 +761,10 @@ def _determine_boundary_edges_idx(nb_idx, element_table):
 
 
 def _extract_all_polygons(be_idx):
+    """
+    Determine polygons and each polygons node order from output of
+    _determine_boundary_edge_idx()
+    """
     # List to store all polygons
     all_polygons = []
 
@@ -797,6 +818,9 @@ def _extract_all_polygons(be_idx):
 
 
 def _polygon_coords(nodes, mesh_polygons):
+    """
+    Determine each polygons node (x,y) coordinates from _extract_all_polygons()
+    """
     poly_coords = []
     for p in mesh_polygons:
         poly_coords.append(nodes[p - 1, :2])
@@ -804,6 +828,9 @@ def _polygon_coords(nodes, mesh_polygons):
 
 
 def _polygon_mask(polygon_coords):
+    """
+    Create Shapely polygon covering mesh domain from _polygon_coords()
+    """
 
     from shapely.geometry import Polygon
 
