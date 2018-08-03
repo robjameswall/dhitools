@@ -3,3 +3,5 @@ v0.0.2, 11/07/2018 -- Minor changes; more detailed docstrings and README
 v0.0.3, 23/07/2018 -- Removed dotenv to handle config paths and replaced with
 					  config.py in package directory
 					  Layer dfsu creation handles duplicate points
+v0.0.4, 03/08/2018 -- Added mesh and dfsu methods to interpolate dfsu items
+					  from unstructured grid to a regular grid
