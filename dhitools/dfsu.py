@@ -489,6 +489,53 @@ class Dfsu(mesh.Mesh):
 
         return z_interp
 
+    def boolean_mask(self, mesh_mask, res=1000):
+        """
+        Create a boolean mask of a regular grid at input resolution indicating
+        if gridded points are within the model mesh.
+
+        This is slightly different to the mesh method which will automatically
+        create the mask if it isn't provided. This will not automatically
+        create the mask and the mask method has been disabled. See mask() for
+        further details.
+
+        Parameters
+        ----------
+        res : int
+            Grid resolution
+        mesh_mask : shapely Polygon object, optional
+            Mesh domain mask output from the method mask(). If this is not
+            provided, it will be created.
+
+        Returns
+        -------
+        bool_mask : ndarray, shape (len_xgrid, len_ygrid)
+            Boolean mask covering the regular grid for the mesh domain
+
+        """
+        from . import _gridded_interpolate as _gi
+        from shapely.geometry import Point
+
+        # Create (x,y) grid at input resolution
+        X, Y = _gi.dfsu_XY_meshgrid(self.nodes[:,0], self.nodes[:,1], res=res)
+
+        # Create boolean mask
+        bool_mask = []
+        for xp, yp in zip(X.ravel(), Y.ravel()):
+            bool_mask.append(Point(xp, yp).within(mesh_mask))
+        bool_mask = np.array(bool_mask)
+        bool_mask = np.reshape(bool_mask, X.shape)
+
+        return bool_mask
+
+    def mask(self):
+        """
+        Method disabled for dfsu class since the node boundary codes for
+        dfsu files are not consistent with mesh boundary codes especially
+        when dfsu area output is a subset of the mesh
+        """
+        raise AttributeError("'dfsu' object has no attribute 'mask'")
+
 
 def _dfsu_info(dfsu_object):
     """

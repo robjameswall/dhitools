@@ -520,6 +520,7 @@ class Mesh(object):
         for xp, yp in zip(X.ravel(), Y.ravel()):
             bool_mask.append(Point(xp, yp).within(mesh_mask))
         bool_mask = np.array(bool_mask)
+        bool_mask = np.reshape(bool_mask, X.shape)
 
         return bool_mask
 
