@@ -457,6 +457,43 @@ class Mesh(object):
         self._grid_res = res
         self._grid_node = nodes
 
+    def meshgrid(self, res):
+        """
+        Create X and Y meshgrid covering node coordinates
+
+        Parameters
+        ----------
+        res : int
+            grid resolution
+
+        Returns
+        -------
+        grid_x : ndarray, shape (len_xgrid, len_ygrid)
+            x grid at specified resolution
+        grid_y : ndarray, shape (len_xgrid, len_ygrid)
+            y grid at specified resolution
+
+        """
+
+        from . import _gridded_interpolate as _gi
+
+        grid_x, grid_y = _gi.dfsu_XY_meshgrid(self.nodes[:,0],
+                                              self.nodes[:,1],
+                                              res=res)
+
+        return grid_x, grid_y
+
+    def mesh_details(self):
+        """
+        Get min and max for input x and y ndarrays; shape (num_nodes,)
+        """
+        from . import _gridded_interpolate as _gi
+
+        min_x, max_x, min_y, max_y = _gi.dfsu_details(self.nodes[:,0],
+                                                      self.nodes[:,1])
+
+        return min_x, max_x, min_y, max_y
+
     def mask(self):
         """
         Create a Shapely polygon mesh domain mask.
