@@ -7,7 +7,7 @@ Features:
 * Interpolate multiple raster DEMs directly to `.mesh` file
 * Read and analyse `.dfsu` model outputs
 * Create `.dfsu` roughness map directly from `.shp` and `.mesh`
-* Read `.dfs0`, `.dfs1`, `.dfsu` files (coming soon)
+* Read `.dfs0`, `.dfs1`, `.dfs2` files (coming soon)
 
 Due to depending on the MIKE SDK `DLL` libraries only Windows is supported.
 
@@ -42,3 +42,7 @@ See the following Jupyter notebooks for examples:
 
 * [Interpolate mesh](https://github.com/robjameswall/dhitools/blob/master/notebooks/mesh_interpolation.ipynb)
 * [Create roughness map](https://github.com/robjameswall/dhitools/blob/master/notebooks/roughness_map.ipynb)
+
+## Documentation
+
+**TODO**
