@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='dhitools',
-    version='0.0.4',
+    version='0.0.5',
     description='Python tools for working with DHI MIKE21',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
