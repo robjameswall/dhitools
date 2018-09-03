@@ -350,6 +350,56 @@ class Dfsu(mesh.Mesh):
             else:
                 return min_ele
 
+    def max_ampltiude(self, item_name='Maximum water depth', datum_shift=0,
+                      nodes=True):
+        """
+        Calculate maximum amplitude from MIKE21 inundation output.
+
+        Specifically, takes the MIKE21 output for `Maximum water depth` across
+        the model run, adjusted for `datum_shift` and calculates maximum
+        amplitude by the difference between the depth and mesh elevation
+
+        Datum shift applies are different water level to a model run and the
+        mesh elevation values saved within the `dfsu` file will be adjusted by
+        the datum shift. So, providing the datum shift is necessary to
+        calculate the correct amplitudes.
+
+        Parameters
+        ----------
+        item_name : str
+            Default is 'Maxium water depth' which is the default output name
+            from MIKE21. Can parse an alternative string if a different name
+            has been used.
+        datum_shift : float
+            Adjust for datum_shift value used during model run. Only necessary
+            if a datum shift was applied to the model. Default is 0.
+        nodes : boolean
+            If True, return data at node coordinates
+            If False, return data at element coordinates
+
+        Returns
+        -------
+        if `node` is True
+        max_amplitude : ndarray, shape (num_nodes,)
+            Max amplitude across entire model run at node coordinates
+
+        if `node` is False
+        max_amplitude : ndarray, shape (num_elements,)
+            Max amplitude across entire model run at element coordinates
+        """
+        
+        depth = self.item_element_data(item_name)[:,0] # Load max depth
+        max_amplitude_ele = self.elements[:,2] + datum_shift # Dfsu elevation
+        max_amplitude_ele[max_amplitude_ele > 0] = 0 # Set overland values to 0
+        # Max amplitdue at elements; add since depths are negative
+        max_amplitude_ele += depth 
+
+        if nodes:
+            max_amplitude = self.ele_to_node(max_amplitude_ele)
+            return max_amplitude
+        else:
+            return max_amplitude_ele
+
     def plot_item(self, item_name=None, tstep=None, node_data=None,
                   kwargs=None):
         """
@@ -394,8 +444,8 @@ class Dfsu(mesh.Mesh):
 
         return fig, ax, tf
 
-    def gridded_item(self, item_name, tstep_start=None, tstep_end=None,
-                     res=1000, node=True):
+    def gridded_item(self, item_name=None, tstep_start=None, tstep_end=None,
+                     res=1000, node=True, node_data=None):
         """
         Calculate gridded item data, either from nodes or elements, at
         specified grid resolution and for a range of time steps. Allows
@@ -425,6 +475,9 @@ class Dfsu(mesh.Mesh):
         node : bool
             If true, interpolate from node data,
             Else, interpolate from element data
+        node_date : ndarray or None, shape (num_nodes,), optional
+            Provide data at node coordinates to create grid from. Will take
+            precedence over `item_name`.
 
         Returns
         -------
@@ -443,10 +496,13 @@ class Dfsu(mesh.Mesh):
         assert self._grid_node == node, \
             "grid_res(node) must be consistent with gridded_item(node)"
 
-        if node:
-            z = self.item_node_data(item_name, tstep_start, tstep_end)
+        if node_data is None:
+            if node:
+                z = self.item_node_data(item_name, tstep_start, tstep_end)
+            else:
+                z = self.item_element_data(item_name, tstep_start, tstep_end)
         else:
-            z = self.item_element_data(item_name, tstep_start, tstep_end)
+            z = np.reshape(node_data, (node_data.shape[0], 1))
 
         # Interpolate z to regular grid
         num_tsteps = z.shape[1]
