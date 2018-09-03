@@ -5,3 +5,6 @@ v0.0.3, 23/07/2018 -- Removed dotenv to handle config paths and replaced with
 					  Layer dfsu creation handles duplicate points
 v0.0.4, 03/08/2018 -- Added mesh and dfsu methods to interpolate dfsu items
 					  from unstructured grid to a regular grid
+					  Changed package dependencies to >= version numbers from ==
+					  Added mesh methods 'meshgrid' and 'mesh_detauls' to return grid info
+v0.0.5, 29/08/2018 -- Added dfsu attribute for dfsu no data/missing value
