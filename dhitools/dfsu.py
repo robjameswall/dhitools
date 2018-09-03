@@ -475,7 +475,7 @@ class Dfsu(mesh.Mesh):
         node : bool
             If true, interpolate from node data,
             Else, interpolate from element data
-        node_date : ndarray or None, shape (num_nodes,), optional
+        node_data : ndarray or None, shape (num_nodes,), optional
             Provide data at node coordinates to create grid from. Will take
             precedence over `item_name`.
 
