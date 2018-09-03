@@ -110,6 +110,7 @@ class Mesh(object):
             dfs_obj = dfs.DfsFileFactory.DfsuFileOpen(filename)
             self.projection = str(dfs_obj.Projection.WKTString)
             self.zUnitKey = dfs_obj.get_ZUnit()
+            self.nodata = dfs_obj.DeleteValueFloat
 
         mesh_in = _read_mesh(dfs_obj)
 
@@ -382,6 +383,10 @@ class Mesh(object):
         -------
         fig : matplotlib figure obj
         ax : matplotlib axis obj
+
+        if fill is True,
+
+        tf : tricontourf obj
 
         See Also
         --------
