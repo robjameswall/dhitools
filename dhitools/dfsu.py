@@ -156,6 +156,28 @@ class Dfsu(mesh.Mesh):
 
         return node_data
 
+    def ele_to_node(self, z_element):
+        """
+        Convert data at element coordinates to node coordinates
+
+        Parameters
+        ----------
+        z_element : ndarray, shape (num_elements,)
+            Data corresponding to order and coordinates of elements
+
+        Returns
+        -------
+        z_node : ndarray, shape (num_nodes,)
+            Data corresponding to order and coordinates of nodes
+
+        """
+
+        z_node = _map_ele_to_node(node_table=self.node_table,
+                                  element_coordinates=self.elements,
+                                  node_coordinates=self.nodes,
+                                  element_data=z_element)
+        return z_node
+
     def max_item(self, item_name, tstep_start=None, tstep_end=None,
                  current_dir=False, node=False):
         """
@@ -328,7 +350,8 @@ class Dfsu(mesh.Mesh):
             else:
                 return min_ele
 
-    def plot_item(self, item_name, tstep, kwargs=None):
+    def plot_item(self, item_name=None, tstep=None, node_data=None,
+                  kwargs=None):
         """
         Plot triangular mesh with tricontourf for input item and timestep
 
@@ -341,6 +364,9 @@ class Dfsu(mesh.Mesh):
             the `Dfsu.items` attribute.
         tstep : int
             Specify time step for node data. Timesteps begin from 0.
+        node_date : ndarray or None, shape (num_nodes,), optional
+            Provide data at node coordinates to plot. Will take precedence
+            over `item_name` and `tstep`.
         kwargs : dict
             Additional arguments supported by tricontourf
 
@@ -351,11 +377,16 @@ class Dfsu(mesh.Mesh):
         tf : tricontourf obj
 
         """
+        if node_data is None:
+            # Get item_data and reshape from (N,1) to (N,) because of single
+            # timestep. tricontourf prefers (N,)
+            assert tstep is not None, \
+                "Must provided tstep if providing `item_name`"
+            item_data = self.item_node_data(item_name, tstep)
+            item_data = np.reshape(item_data, self.num_nodes)
 
-        # Get item_data and reshape from (N,1) to (N,) because of single
-        # timestep. tricontourf prefers (N,)
-        item_data = self.item_node_data(item_name, tstep)
-        item_data = np.reshape(item_data, self.num_nodes)
+        else:
+            item_data = node_data
 
         fig, ax, tf = mesh._filled_mesh_plot(self.nodes[:,0], self.nodes[:,1],
                                              item_data, self.element_table,
@@ -626,7 +657,7 @@ def _interp_node_z(nn,node_table,xe,ye,ze,xn,yn):
     """
     Calculate value at node (xn,yn) from element center values (xe, ye, ze).
 
-    Attempts to use Psuedo Lapalce procedure by [Holmes, Connel 1989]. If this
+    Attempts to use Psuedo Laplace procedure by [Holmes, Connel 1989]. If this
     fails, uses an inverse distance average.
 
     Parameters
