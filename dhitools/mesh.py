@@ -29,7 +29,8 @@ from . import _utils
 
 class Mesh(object):
     """
-    MIKE21 .mesh
+    MIKE21 mesh class. Contains many attributes read in from the input `.mesh`
+    file.
 
     Parameters
     ----------
@@ -62,18 +63,18 @@ class Mesh(object):
     projection : str
         .mesh spatial projection string in WKT format
     zUnitKey : int
-        EUM unit designating quantity of Z variable
-        1000 = metres
-        1014 = U.S. feet
+        EUM unit designating quantity of Z variable:
+
+        * 1000 = metres
+        * 1014 = U.S. feet
+    lyrs : dict
+        Stores additional layers from :func:`lyr_from_shape()`
 
     See Also
     ----------
-    Many of these methods have been adapated from the DHI MATLAB Toolbox:
-        https://www.mikepoweredbydhi.com/download/mike-by-dhi-tools/
-        coastandseatools/dhi-matlab-toolbox
-    Method grid_res()
-        Grid interpolation paramters which have additional attributes
-        if calculated
+
+    * Many of these methods have been adapated from the `DHI MATLAB Toolbox <https://github.com/DHI/DHI-MATLAB-Toolbox>`_
+    * Method :func:`grid_res()`: Grid interpolation paramters which have additional attributes if calculated
     """
 
     def __init__(self, filename=None):
@@ -130,7 +131,7 @@ class Mesh(object):
 
     def summary(self):
         '''
-        Summarise .mesh file
+        Prints a summary of the mesh
         '''
         if self._file_input:
             print("Input mesh file: {}".format(self.filename))
@@ -184,13 +185,9 @@ class Mesh(object):
         --------
         Interpolation methods:
 
-        https://docs.scipy.org/doc/scipy-0.14.0/reference/generated/
-        scipy.interpolate.NearestNDInterpolator.html#scipy.interpolate.
-        NearestNDInterpolator
+        * `NearestNDInterpolator <https://docs.scipy.org/doc/scipy-0.14.0/reference/generated/scipy.interpolate.NearestNDInterpolator.html#scipy.interpolate.NearestNDInterpolator>`_
 
-        https://docs.scipy.org/doc/scipy-0.14.0/reference/generated/
-        scipy.interpolate.LinearNDInterpolator.html#scipy.interpolate.
-        LinearNDInterpolator
+        * `LinearNDInterpolator <https://docs.scipy.org/doc/scipy-0.14.0/reference/generated/scipy.interpolate.LinearNDInterpolator.html#scipy.interpolate.LinearNDInterpolator>`_
 
         '''
         from . import _raster_interpolate as _ri
@@ -314,12 +311,13 @@ class Mesh(object):
         attribute dictionary as value at element coordinates to write to
         .dfsu file.
 
-        See also `lyr_from_shape`.
+        See also :func:`lyr_from_shape()`.
 
         Parameters
         ----------
         lyr_name : str
-            Layer name as key to `lyrs` attribute dictionary
+            Layer name as key to :class:`lyrs <dhitools.mesh.Mesh>` attribute
+            dictionary
         output_dfsu : str
             Path to output .dfsu file
 
@@ -382,16 +380,18 @@ class Mesh(object):
         Returns
         -------
         fig : matplotlib figure obj
+            Figure object
         ax : matplotlib axis obj
+            Axis object
 
-        if fill is True,
-
-        tf : tricontourf obj
+        If `fill` is True
+            tf : matplotlib tricontourf obj
+                Tricontourf object
 
         See Also
         --------
-        https://matplotlib.org/api/_as_gen/matplotlib.pyplot.triplot.html
-        https://matplotlib.org/api/_as_gen/matplotlib.pyplot.tricontourf.html
+        * `Triplot <https://matplotlib.org/api/_as_gen/matplotlib.pyplot.triplot.html>`_
+        * `Tricontourf <https://matplotlib.org/api/_as_gen/matplotlib.pyplot.tricontourf.html>`_
 
         """
         if fill:
@@ -491,6 +491,13 @@ class Mesh(object):
     def mesh_details(self):
         """
         Get min and max for input x and y ndarrays; shape (num_nodes,)
+
+        Returns
+        -------
+        min_x : float
+        max_x : float
+        min_y : float
+        max_y : float
         """
         from . import _gridded_interpolate as _gi
 

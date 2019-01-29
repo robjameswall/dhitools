@@ -23,7 +23,9 @@ import DHI.Generic.MikeZero.DFS as dfs
 
 class Dfsu(mesh.Mesh):
     """
-    MIKE21 .dfsu
+    MIKE21 dfsu class. Contains many attributes read in from the input `.dfsu`
+    file. Uses :class:`dhitools.mesh.Mesh` as a base class and inherits its
+    methods.
 
     Parameters
     ----------
@@ -52,9 +54,7 @@ class Dfsu(mesh.Mesh):
 
     See Also
     ----------
-    Many of these methods have been adapated from the DHI MATLAB Toolbox:
-        https://www.mikepoweredbydhi.com/download/mike-by-dhi-tools/
-        coastandseatools/dhi-matlab-toolbox
+    * Many of these methods have been adapated from the `DHI MATLAB Toolbox <https://github.com/DHI/DHI-MATLAB-Toolbox>`_
     """
 
     def __init__(self, filename=None):
@@ -65,10 +65,20 @@ class Dfsu(mesh.Mesh):
             dfsu_object.Close()
 
     def read_dfsu(self, filename):
-        """ Read in .dfsu file and read attributes """
+        """
+        Read in .dfsu file and read attributes
+
+        Parameters
+        ----------
+        filename : str
+            File path to .dfsu file
+        """
         self.read_mesh(filename)
 
     def summary(self):
+        """
+        Prints a summary of the dfsu
+        """
         print("Input .dfsu file: {}".format(self.filename))
         print("Num. Elmts = {}".format(self.num_elements))
         print("Num. Nodes = {}".format(self.num_nodes))
@@ -292,24 +302,24 @@ class Dfsu(mesh.Mesh):
         Returns
         -------
         If `current_dir` is False:
-        min_ele : ndarray, shape (num_elements,)
-            Minimum elements values for specified item
+            min_ele : ndarray, shape (num_elements,)
+                Minimum elements values for specified item
 
         If `current_dir` is True
-        min_ele : ndarray, shape (num_elements,)
-            Minimum elements values for specified item
-        min_current_dir : ndarray, shape (num_elements,)
-            Current direction corresponding to `min_ele`
+            min_ele : ndarray, shape (num_elements,)
+                Minimum elements values for specified item
+            min_current_dir : ndarray, shape (num_elements,)
+                Current direction corresponding to `min_ele`
 
         if `node` is True
-        min_node : ndarray, shape (num_nodes,)
-            Minimum node values for specified item
+            min_node : ndarray, shape (num_nodes,)
+                Minimum node values for specified item
 
         If `node` and `current_dir` are True
-        min_node : ndarray, shape (num_nodes,)
-            Minimum node values for specified item
-        min_current_dir : ndarray, shape (num_elements,)
-            Current direction corresponding to `min_node`
+            min_node : ndarray, shape (num_nodes,)
+                Minimum node values for specified item
+            min_current_dir : ndarray, shape (num_elements,)
+                Current direction corresponding to `min_node`
 
         """
 
@@ -451,7 +461,7 @@ class Dfsu(mesh.Mesh):
         specified grid resolution and for a range of time steps. Allows
         for downsampling of high resolution mesh's to a more manageable size.
 
-        The method grid_res() needs to be run before this to calculate the grid
+        The method :func:`grid_res() <dhitools.mesh.Mesh.grid_res()>` needs to be run before this to calculate the grid
         parameters needed for interpolation. Pre-calculating these also greatly
         improves run-time. res and node must be consistent between grid_res()
         and gridded_item().
