@@ -20,7 +20,7 @@ Read in **.mesh** file and inspect mesh
 	a1.set_aspect('equal')
 	plt.show()
 
-.. image:: _build/html/imgs/mesh.png
+.. image:: imgs/mesh.png
     :align: center
     :alt: mesh plot
 
@@ -46,6 +46,6 @@ Read in **.dfsu** file and plot surface elevation at timestep 500
 	ax_se.set_title('Surface elevation; t = 500')
 	plt.show()
 
-.. image:: _build/html/imgs/surface_elav.png
+.. image:: imgs/surface_elav.png
     :align: center
     :alt: dfsu plot
