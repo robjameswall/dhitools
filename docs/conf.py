@@ -47,7 +47,7 @@ extensions = [
 napoleon_numpy_docstring = True
 
 # Mock imports for dependencies not met at build time
-autodoc_mock_imports = ["gdal", "geopandas", "pythonnet"]
+autodoc_mock_imports = ["gdal", "geopandas", "clr"]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
