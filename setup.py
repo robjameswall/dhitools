@@ -24,9 +24,5 @@ setup(
         "pythonnet>=2.3.0",
         "PyCRS>=0.1.3",
         "scipy>=1.1.0"
-    ],
-    extras_requires={
-        'gis': ["GDAL>=2.2.4",
-                "geopandas>=0.3.0"]
-    }
+    ]
 )
