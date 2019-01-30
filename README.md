@@ -20,6 +20,8 @@ Due to depending on the MIKE SDK `DLL` libraries only Windows is supported.
 * [Geopandas](https://pypi.org/project/geopandas/) 
 * [Pythonnet](http://pythonnet.github.io/)
 
+![Mesh plot](https://raw.githubusercontent.com/robjameswall/dhitools/master/docs/imgs/mesh.png)
+
 **Install**
 
 > Recommended that [Anaconda](https://www.anaconda.com/download/) is used to install `GDAL` and `geopandas`. Alternatively, see [here](https://pypi.org/project/GDAL/) and [here](http://geopandas.org/install.html) for installation instructions of these packages.
@@ -32,6 +34,7 @@ After installing the MIKE SDK:
 ```
 conda install gdal
 conda install geopandas
+pip install pythonnet
 pip install dhitools
 ```
 

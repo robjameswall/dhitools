@@ -24,4 +24,5 @@ After installing the MIKE SDK::
 
 	conda install gdal
 	conda install geopandas
+	pip install pythonnet
 	pip install dhitools
