@@ -15,7 +15,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../'))
-autodoc_mock_imports = ["geopandas"]
+autodoc_mock_imports = ["geopandas", "clr", "DHI", "System"]
 
 
 # -- Project information -----------------------------------------------------
