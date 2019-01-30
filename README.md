@@ -1,5 +1,7 @@
 ## DHI Tools
 
+[![Documentation Status](https://readthedocs.org/projects/dhitools/badge/?version=latest)](https://dhitools.readthedocs.io/en/latest/?badge=latest)
+
 Python tools for working with [DHI MIKE21](https://www.mikepoweredbydhi.com/products/mike-21).
 
 Features:  
@@ -11,6 +13,8 @@ Features:
 
 Due to depending on the MIKE SDK `DLL` libraries only Windows is supported.
 
+![Mesh plot](https://raw.githubusercontent.com/robjameswall/dhitools/master/docs/imgs/mesh.png)
+
 ## Install
 
 **Requirements**
@@ -19,8 +23,6 @@ Due to depending on the MIKE SDK `DLL` libraries only Windows is supported.
 * [GDAL/OGR](https://pypi.org/project/GDAL/)
 * [Geopandas](https://pypi.org/project/geopandas/) 
 * [Pythonnet](http://pythonnet.github.io/)
-
-![Mesh plot](https://raw.githubusercontent.com/robjameswall/dhitools/master/docs/imgs/mesh.png)
 
 **Install**
 
