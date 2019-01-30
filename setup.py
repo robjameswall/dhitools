@@ -21,6 +21,7 @@ setup(
     ],
     install_requires=[
         "numpy >= 1.14.5",
+        "pythonnet>=2.3.0",
         "PyCRS>=0.1.3",
         "scipy>=1.1.0"
     ]
