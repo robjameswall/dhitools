@@ -56,10 +56,14 @@ class Dfsu(mesh.Mesh):
         Start datetime (as a string)
     start_datetime : datetime
         Start datetime (datetime object)
+    end_datetime : datetime
+        End datetime (datetime object)
     timestep : float
         Timestep delta in seconds
     number_tstep : int
         Total number of timesteps
+    time : ndarray, shape (number_tstep,)
+        Sequence of datetimes between start and end datetime at delta timestep
 
     See Also
     ----------
@@ -89,11 +93,15 @@ class Dfsu(mesh.Mesh):
         self.start_datetime = dt.datetime.strptime(self.start_datetime_str,
                                                    '%d/%m/%Y %H:%M:%S %p')
         self.timestep = dfsu_object.TimeStepInSeconds
-        self.number_tstep = dfsu_object.NumberOfTimeSteps
+        self.number_tstep = dfsu_object.NumberOfTimeSteps - 1
+        self.end_datetime = self.start_datetime + \
+            dt.timedelta(seconds=self.timestep * self.number_tstep)
+        self.time = np.arange(self.start_datetime,
+                              self.end_datetime + dt.timedelta(seconds=self.timestep),
+                              dt.timedelta(seconds=self.timestep)).astype(dt.datetime)
 
         self.items = _dfsu_info(dfsu_object)
         dfsu_object.Close()
-
 
     def summary(self):
         """
@@ -104,6 +112,10 @@ class Dfsu(mesh.Mesh):
         print("Num. Nodes = {}".format(self.num_nodes))
         print("Mean elevation = {}".format(np.mean(self.nodes[:, 2])))
         print("Projection = \n {}".format(self.projection))
+        print("\n")
+        print("Time start = {}".format(self.start_datetime_str))
+        print("Number of timesteps = {}".format(self.number_tstep))
+        print("Timestep = {}".format(self.timestep))
         print("\n")
         print("Number of items = {}".format(len(self.items) - 3))
         print("Items:")
