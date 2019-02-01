@@ -102,6 +102,8 @@ class Mesh(object):
         '''
         if filename is None:
             filename = self.filename
+        else:
+            self.filename = filename
 
         if filename.endswith('.mesh'):
             dfs_obj = dfs.mesh.MeshFile.ReadMesh(filename)

@@ -5,6 +5,7 @@ Author: Robert Wall
 """
 
 import numpy as np
+import datetime as dt
 from . import mesh
 from . import _utils
 from . import config
@@ -51,6 +52,14 @@ class Dfsu(mesh.Mesh):
         (x,y,z) coordinate for each node
     elements : ndarray, shape (num_ele, 3)
         (x,y,z) coordinate for each element
+    start_datetime_str : str
+        Start datetime (as a string)
+    start_datetime : datetime
+        Start datetime (datetime object)
+    timestep : float
+        Timestep delta in seconds
+    number_tstep : int
+        Total number of timesteps
 
     See Also
     ----------
@@ -60,9 +69,7 @@ class Dfsu(mesh.Mesh):
     def __init__(self, filename=None):
         super(Dfsu, self).__init__(filename)
         if self.filename is not None:
-            dfsu_object = dfs.DfsFileFactory.DfsuFileOpen(self.filename)
-            self.items = _dfsu_info(dfsu_object)
-            dfsu_object.Close()
+            self.read_dfsu(self.filename)
 
     def read_dfsu(self, filename):
         """
@@ -74,6 +81,19 @@ class Dfsu(mesh.Mesh):
             File path to .dfsu file
         """
         self.read_mesh(filename)
+
+        dfsu_object = dfs.DfsFileFactory.DfsuFileOpen(self.filename)
+
+        # Time attributes
+        self.start_datetime_str = dfsu_object.StartDateTime.Date.ToString()
+        self.start_datetime = dt.datetime.strptime(self.start_datetime_str,
+                                                   '%d/%m/%Y %H:%M:%S %p')
+        self.timestep = dfsu_object.TimeStepInSeconds
+        self.number_tstep = dfsu_object.NumberOfTimeSteps
+
+        self.items = _dfsu_info(dfsu_object)
+        dfsu_object.Close()
+
 
     def summary(self):
         """
