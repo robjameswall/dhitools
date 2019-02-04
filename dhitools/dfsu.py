@@ -9,17 +9,23 @@ import datetime as dt
 from . import mesh
 from . import _utils
 from . import config
+from . import units
 import os
 import clr
 
 # Set path to MIKE SDK
 sdk_path = config.MIKE_SDK
 dfs_dll = config.MIKE_DFS
+eum_dll = config.MIKE_EUM
 clr.AddReference(os.path.join(sdk_path, dfs_dll))
+clr.AddReference(os.path.join(sdk_path, eum_dll))
 clr.AddReference('System')
 
 # Import .NET libraries
 import DHI.Generic.MikeZero.DFS as dfs
+from DHI.Generic.MikeZero import eumQuantity
+import System
+from System import Array
 
 
 class Dfsu(mesh.Mesh):
@@ -664,6 +670,93 @@ class Dfsu(mesh.Mesh):
         when dfsu area output is a subset of the mesh
         """
         raise AttributeError("'dfsu' object has no attribute 'mask'")
+
+    def create_dfsu(self, arr, item_name, output_dfsu,
+                    start_datetime=None, timestep=None,
+                    item_type=units.get_item("SurfaceElevation"),
+                    unit_type=units.get_unit("meter")):
+        """
+        Function description...
+
+        Parameters
+        ----------
+        input_1 : dtype, shape (n_components,)
+            input_1 description...
+        input_2 : int
+            input_2 description...
+
+        Returns
+        -------
+        Creates a new `dfsu` file at `output_dfsu`
+
+        """
+        assert arr.shape[0] == self.num_elements, \
+            "Rows of input array must equal number of mesh elements"
+
+        dfs_obj = dfs.DfsFileFactory.DfsuFileOpen(self.filename)
+        builder = dfs.dfsu.DfsuBuilder.Create(dfs.dfsu.DfsuFileType.Dfsu2D)
+        d = dfs.DfsFactory()
+
+        # Create mesh nodes
+        node_x = Array[System.Double](self.nodes[:,0])
+        node_y = Array[System.Double](self.nodes[:,1])
+        node_z = Array[System.Single](self.nodes[:,2])
+        node_id = Array[System.Int32](self.node_boundary_codes)
+
+        # Element table
+        element_table = Array.CreateInstance(System.Int32, self.num_elements, 3)
+
+        for i in range(self.num_elements):
+            for j in range(self.element_table.shape[1]):
+                element_table[i,j] = self.element_table[i,j]
+
+        # Set dfsu items
+        builder.SetNodes(node_x, node_y, node_z, node_id)
+        builder.SetElements(dfs_obj.ElementTable)
+        builder.SetProjection(d.CreateProjection(self.projection))
+
+        # Start datetime and time step
+        if start_datetime is not None:
+            sys_dt = System.DateTime(start_datetime.year,
+                                     start_datetime.month,
+                                     start_datetime.day,
+                                     start_datetime.hour,
+                                     start_datetime.minute,
+                                     start_datetime.second)
+        else:
+            sys_dt = dfs_obj.StartDateTime
+
+        if timestep is None:
+            timestep = dfs_obj.TimeStepInSeconds
+        builder.SetTimeInfo(sys_dt, timestep)
+
+        # Create item
+        builder.AddDynamicItem(item_name, eumQuantity(item_type, unit_type))
+
+        # Create file
+        dfsu_file = builder.CreateFile(output_dfsu)
+
+        # Write item data
+        if arr.ndim != 1:
+            # Multiple time steps
+            nsteps = arr.shape[1]
+            for j in range(nsteps):
+                net_arr = Array.CreateInstance(System.Single, self.num_elements)
+
+                for i, val in enumerate(arr[:,j]):
+                    net_arr[i] = val
+
+                dfsu_file.WriteItemTimeStepNext(0, net_arr)
+
+        else:
+            # Single timestep
+            net_arr = Array.CreateInstance(System.Single, self.num_elements)
+            for i, val in enumerate(arr):
+                net_arr[i] = val
+            dfsu_file.WriteItemTimeStepNext(0, net_arr)
+
+        # Close file
+        dfsu_file.Close()
 
 
 def _dfsu_info(dfsu_object):
