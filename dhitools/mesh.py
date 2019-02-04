@@ -20,11 +20,12 @@ clr.AddReference('System')
 
 # Import .NET libraries
 import DHI.Generic.MikeZero.DFS as dfs
-from DHI.Generic.MikeZero import eumUnit, eumItem, eumQuantity
+from DHI.Generic.MikeZero import eumQuantity
 import System
 from System import Array
 
 from . import _utils
+from . import units
 
 
 class Mesh(object):
@@ -307,7 +308,9 @@ class Mesh(object):
         if output_shp is not None:
             join_df.to_file(output_shp)
 
-    def lyr_to_dfsu(self, lyr_name, output_dfsu):
+    def lyr_to_dfsu(self, lyr_name, output_dfsu,
+                    item_type=units.get_item("ManningsM"),
+                    unit_type=units.get_unit("Meter2One3rdPerSec")):
         """
         Create model layer .dfsu file `lyr` attribute. References `lyrs`
         attribute dictionary as value at element coordinates to write to
@@ -322,10 +325,16 @@ class Mesh(object):
             dictionary
         output_dfsu : str
             Path to output .dfsu file
+        item_type : int
+            MIKE21 item code. See :func:`get_item() <dhitools.units.get_item>`.
+            Default is "Mannings M"
+        unit_type : int
+            MIKE21 unit code. See :func:`get_unit() <dhitools.units.get_unit>`.
+            Default is "Mannings M" unit "cube root metre per second"
 
         Returns
         -------
-        weights : array, shape (n_components,)
+        Writes `dfsu` file to `output_dfsu`.
 
         """
         # Check that lyr_name is correct
@@ -348,8 +357,8 @@ class Mesh(object):
 
         # Create dfsu attribute
         builder.AddDynamicItem(lyr_name,
-                               eumQuantity(eumItem.eumIManningsM,
-                                           eumUnit.eumUMeter2One3rdPerSec))
+                               eumQuantity(item_type,
+                                           unit_type))
 
         # Create file
         dfsu_file = builder.CreateFile(output_dfsu)
