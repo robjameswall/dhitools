@@ -666,8 +666,8 @@ class Dfsu(mesh.Mesh):
     def mask(self):
         """
         Method disabled for dfsu class since the node boundary codes for
-        dfsu files are not consistent with mesh boundary codes especially
-        when dfsu area output is a subset of the mesh
+        dfsu files are not consistent with mesh boundary codes particularly
+        when dfsu output is a subset of the mesh
         """
         raise AttributeError("'dfsu' object has no attribute 'mask'")
 
@@ -676,18 +676,37 @@ class Dfsu(mesh.Mesh):
                     item_type=units.get_item("SurfaceElevation"),
                     unit_type=units.get_unit("meter")):
         """
-        Function description...
+        Create a new `dfsu` file based on the underlying :class:`Dfsu()` for
+        some new non-temporal or temporal layer.
 
         Parameters
         ----------
-        input_1 : dtype, shape (n_components,)
-            input_1 description...
-        input_2 : int
-            input_2 description...
+        arr : ndarray, shape (num_elements, num_timesteps)
+            Array to write to dfsu file. Number of rows must equal the number
+            of elements in the :class:`Dfsu()` object and the order of the
+            array must align with the order of the elements. Can create a
+            non-temporal `dfsu` layer of a single dimensional input `arr`, or a
+            temporal `dfsu` layer at `timestep` from `start_datetime`.
+        item_name : str
+            Name of item to write to `dfsu`
+        output_dfsu : str
+            Path to output .dfsu file
+        start_datetime : datetime
+            Start datetime (datetime object). If `None`, use the base
+            :class:`Dfsu()` `start_datetime`.
+        timestep : float
+            Timestep delta in seconds. If `None`, use the base
+            :class:`Dfsu()` `timestep`.
+        item_type : str
+            MIKE21 item code. See :func:`get_item() <dhitools.units.get_item>`.
+            Default is "Mannings M"
+        unit_type : str
+            MIKE21 unit code. See :func:`get_unit() <dhitools.units.get_unit>`.
+            Default is "Mannings M" unit "cube root metre per second"
 
         Returns
         -------
-        Creates a new `dfsu` file at `output_dfsu`
+        Creates a new dfsu file at output_dfsu : dfsu file
 
         """
         assert arr.shape[0] == self.num_elements, \

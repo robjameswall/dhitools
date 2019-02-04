@@ -182,7 +182,7 @@ class Mesh(object):
 
         Returns
         -------
-        Updates mesh.nodes z coordinates
+        Updates mesh.nodes z coordinates : :class:`Mesh.nodes` z update
 
         See Also
         --------
@@ -334,7 +334,7 @@ class Mesh(object):
 
         Returns
         -------
-        Writes `dfsu` file to `output_dfsu`.
+        Creates a new dfsu file at output_dfsu : dfsu file
 
         """
         # Check that lyr_name is correct
