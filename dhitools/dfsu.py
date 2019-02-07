@@ -435,12 +435,12 @@ class Dfsu(mesh.Mesh):
         max_amplitude : ndarray, shape (num_elements,)
             Max amplitude across entire model run at element coordinates
         """
-        
-        depth = self.item_element_data(item_name)[:,0] # Load max depth
-        max_amplitude_ele = self.elements[:,2] + datum_shift # Dfsu elevation
-        max_amplitude_ele[max_amplitude_ele > 0] = 0 # Set overland values to 0
+
+        depth = self.item_element_data(item_name)[:,0]  # Load max depth
+        max_amplitude_ele = self.elements[:,2] + datum_shift  # Dfsu elevation
+        max_amplitude_ele[max_amplitude_ele > 0] = 0  # Set overland values to 0
         # Max amplitdue at elements; add since depths are negative
-        max_amplitude_ele += depth 
+        max_amplitude_ele += depth
 
         if nodes:
             max_amplitude = self.ele_to_node(max_amplitude_ele)
@@ -813,7 +813,7 @@ Read item node and element data
 def _element_data(dfsu_object, item_name, item_info,
                   tstep_start=None, tstep_end=None,
                   element_list=None):
-    """ Read specified item_name element data """
+    """ Read specified item_name element data"""
     if element_list:
         # Subtract zero to match Python idx'ing
         element_list = [e-1 for e in element_list]
