@@ -22,19 +22,7 @@ import DHI.Generic.MikeZero.DFS as dfs
 
 class _Dfs(object):
     """
-    Function description...
-
-    Parameters
-    ----------
-    input_1 : dtype, shape (n_components,)
-        input_1 description...
-    input_2 : int
-        input_2 description...
-
-    Returns
-    -------
-    weights : array, shape (n_components,)
-
+    Base class for dfs0/1/2
     """
 
     def __init__(self, dfs_object):
@@ -43,6 +31,11 @@ class _Dfs(object):
         self.time = self.dfs_time()
 
     def dfs_info(self, dfs_object):
+        """
+        Make a dictionary with .dfs items and other attributes.
+
+        See class attributes
+        """
         items = {}
         itemnames = [[n.Name, n.Quantity.UnitAbbreviation] for n in dfs_object.ItemInfo]
         time_obj = dfs_object.FileInfo.TimeAxis
@@ -73,6 +66,7 @@ class _Dfs(object):
         return items
 
     def dfs_time(self):
+        """ Create a time sequency between start and end datetime """
         time = np.arange(self.start_datetime,
                          self.end_datetime,
                          dt.timedelta(seconds=self.timestep)).astype(dt.datetime)
@@ -87,11 +81,23 @@ class _Dfs(object):
                                                             "%d/%m/%Y %H:%M:%S")))
         print("Number of timesteps = {}".format(self.number_tstep))
         print("Timestep = {}".format(self.timestep))
-        print("\n")
         print("Number of items = {}".format(self.num_items))
 
+        # Dfs1 specific
         if(self.filename.endswith(".dfs1")):
             print("number of profile points = {}".format(self.num_points))
+
+        # Dfs2 specific
+        if(self.filename.endswith(".dfs2")):
+            print("")
+            print("Projection = \n {}".format(self.projection))
+            print("")
+            print("Grid:")
+            print("(num_X, num_Y) = ({}, {})".format(self.x_count, self.y_count))
+            print("(del_X, del_Y) = ({}, {})".format(self.del_x, self.del_y))
+            print("(X_min, Y_min) = ({}, {})".format(self.x_min, self.y_min))
+            print("(X_max, Y_max) = ({}, {})".format(self.x_max, self.y_max))
+            print("")
 
         print("Items:")
         for n in self.items['names']:
@@ -101,42 +107,48 @@ class _Dfs(object):
 
 class Dfs0(_Dfs):
     """
-    Function description...
+    MIKE21 dfs0 class. Contains many attributes read in from the input `.dfs0`
+    file.
 
     Parameters
     ----------
-    input_1 : dtype, shape (n_components,)
-        input_1 description...
-    input_2 : int
-        input_2 description...
+    filename : str
+        Path to .dfs0
 
-    Returns
+    Attributes
     -------
-    weights : array, shape (n_components,)
-
+    filename : str
+        Path to .dfs0
+    data : pandas.DataFrame, shape (num_timesteps, num_items)
+        Pandas DataFrame containing .dfs0 item data.
+        Indexed by time. Columns are each .dfs0 item name.
+    num_items : int
+        Total number of .dfs0 items
+    items : dict
+        List .dfs0 items (ie. surface elevation, current speed), item names,
+        item indexto lookup in .dfs0, item units and counts of elements, nodes
+        and time steps.
+    start_datetime : datetime
+        Start datetime (datetime object)
+    end_datetime : datetime
+        End datetime (datetime object)
+    timestep : float
+        Timestep delta in seconds
+    number_tstep : int
+        Total number of timesteps
+    time : ndarray, shape (number_tstep,)
+        Sequence of datetimes between start and end datetime at delta timestep
     """
 
     def __init__(self, filename):
         self.filename = filename
         dfs0_object = dfs.DfsFileFactory.DfsGenericOpen(self.filename)
         super(Dfs0, self).__init__(dfs0_object)
-        self.data = self.read_dfs0(dfs0_object)
+        self.data = self._read_dfs0(dfs0_object)
 
-    def read_dfs0(self, dfs0_object, close=True):
+    def _read_dfs0(self, dfs0_object, close=True):
         """
-        Function description...
-
-        Parameters
-        ----------
-        input_1 : dtype, shape (n_components,)
-            input_1 description...
-        input_2 : int
-            input_2 description...
-
-        Returns
-        -------
-        weights : array, shape (n_components,)
-
+        Read in .dfs0 file
         """
         out_arr = np.zeros((self.number_tstep, self.num_items))
 
@@ -156,19 +168,37 @@ class Dfs0(_Dfs):
 
 class Dfs1(_Dfs):
     """
-    Function description...
+    MIKE21 dfs1 class. Contains many attributes read in from the input `.dfs1`
+    file.
 
     Parameters
     ----------
-    input_1 : dtype, shape (n_components,)
-        input_1 description...
-    input_2 : int
-        input_2 description...
+    filename : str
+        Path to .dfs1
 
-    Returns
+    Attributes
     -------
-    weights : array, shape (n_components,)
-
+    filename : str
+        Path to .dfs1
+    num_items : int
+        Total number of .dfs1 items
+    num_points : int
+        Total number of .dfs1 profile points within each item
+    items : dict
+        List .dfs1 items (ie. surface elevation, current speed), item names,
+        item indexto lookup in .dfs1, item units and counts of elements, nodes
+        and time steps. Contains item data, accessed by dict key `item_name`.
+        This is more easily accessed by :func:`item_data()`.
+    start_datetime : datetime
+        Start datetime (datetime object)
+    end_datetime : datetime
+        End datetime (datetime object)
+    timestep : float
+        Timestep delta in seconds
+    number_tstep : int
+        Total number of timesteps
+    time : ndarray, shape (number_tstep,)
+        Sequence of datetimes between start and end datetime at delta timestep
     """
 
     def __init__(self, filename):
@@ -176,23 +206,11 @@ class Dfs1(_Dfs):
         dfs1_object = dfs.DfsFileFactory.Dfs1FileOpen(self.filename)
         self.num_points = len(dfs1_object.ReadItemTimeStep(1,0).Data)
         super(Dfs1, self).__init__(dfs1_object)
-        self.read_dfs1(dfs1_object)
+        self._read_dfs1(dfs1_object)
 
-    def read_dfs1(self, dfs1_object, close=True):
+    def _read_dfs1(self, dfs1_object, close=True):
         """
-        Function description...
-
-        Parameters
-        ----------
-        input_1 : dtype, shape (n_components,)
-            input_1 description...
-        input_2 : int
-            input_2 description...
-
-        Returns
-        -------
-        weights : array, shape (n_components,)
-
+        Read in .dfs1 file
         """
         for itemname in self.items['names']:
             item_idx = self.items[itemname]['index'] + 1
@@ -209,19 +227,20 @@ class Dfs1(_Dfs):
 
     def item_data(self, item_name):
         """
-        Function description...
+        Return pandas DataFrame of `dfs1` item data.
 
         Parameters
         ----------
-        input_1 : dtype, shape (n_components,)
-            input_1 description...
-        input_2 : int
-            input_2 description...
+        item_name : str
+            Specified item to return element data. Item names can be found in
+            :class:`items <dhitools.dfs.Dfs1`>` attribute or by
+            :func:`summary()`.
 
         Returns
         -------
-        weights : array, shape (n_components,)
-
+        data : pandas.DataFrame, shape (num_timesteps, num_points)
+            Pandas DataFrame containing .dfs1 item data.
+            Indexed by time. Columns are each of the profile points.
         """
 
         return self.items[item_name]["data"]
@@ -229,19 +248,67 @@ class Dfs1(_Dfs):
 
 class Dfs2(_Dfs):
     """
-    Function description...
+    MIKE21 dfs2 class. Contains many attributes read in from the input `.dfs2`
+    file.
 
     Parameters
     ----------
-    input_1 : dtype, shape (n_components,)
-        input_1 description...
-    input_2 : int
-        input_2 description...
+    filename : str
+        Path to .dfs2
 
-    Returns
+    Attributes
     -------
-    weights : array, shape (n_components,)
-
+    filename : str
+        Path to .dfs2
+    num_items : int
+        Total number of .dfs2 items
+    num_points : int
+        Total number of .dfs2 profile points within each item
+    items : dict
+        List .dfs2 items (ie. surface elevation, current speed), item names,
+        item indexto lookup in .dfs2, item units and counts of elements, nodes
+        and time steps. Contains item data, accessed by dict key `item_name`.
+        This is more easily accessed by :func:`item_data()`.
+    start_datetime : datetime
+        Start datetime (datetime object)
+    end_datetime : datetime
+        End datetime (datetime object)
+    timestep : float
+        Timestep delta in seconds
+    number_tstep : int
+        Total number of timesteps
+    time : ndarray, shape (number_tstep,)
+        Sequence of datetimes between start and end datetime at delta timestep
+    projection : str
+        .mesh spatial projection string in WKT format
+    X : ndarray, shape (y_count, x_count)
+        X meshgrid
+    Y : ndarray, shape (y_count, x_count)
+        Y meshgrid
+    gridshape : tuple, length 2
+        .dfs2 grid shape
+    x_count : int
+        Number of x points
+    y_count : int
+        Number of y points
+    del_x : int
+        X grid step
+    del_y : int
+        Y grid step
+    x_max : int
+        Max x value
+    x_min : int
+        Min x value
+    y_max : int
+        Max y value
+    y_min : int
+        Min y value
+    nodata_float : float
+        Nodata value for type float data
+    nodata_double : float
+        Nodata value for type double data
+    nodata_int : int
+        Nodata value for type int data
     """
 
     def __init__(self, filename):
@@ -249,9 +316,12 @@ class Dfs2(_Dfs):
         dfs2_object = dfs.DfsFileFactory.Dfs2FileOpen(self.filename)
         self.num_points = len(dfs2_object.ReadItemTimeStep(1,0).Data)
         super(Dfs2, self).__init__(dfs2_object)
-        self.read_dfs2(dfs2_object)
+        self._read_dfs2(dfs2_object)
 
-    def read_dfs2(self, dfs2_object, close=True):
+    def _read_dfs2(self, dfs2_object, close=True):
+        """
+        Read in .dfs2 file
+        """
         sa = dfs2_object.SpatialAxis
         fi = dfs2_object.FileInfo
         self.projection = str(fi.Projection.WKTString)
@@ -282,14 +352,23 @@ class Dfs2(_Dfs):
 
         Parameters
         ----------
-        input_1 : dtype, shape (n_components,)
-            input_1 description...
-        input_2 : int
-            input_2 description...
+        item_name : str
+            Specified item to return data. Item names are found in
+            the `Dfs2.items` attribute.
+        tstep_start : int or None, optional
+            Specify time step for element data. Timesteps begin from 0.
+            If `None`, returns data from 0 time step.
+        tstep_end : int or None, optional
+            Specify last time step for element data. Allows for range of time
+            steps to be returned, where `tstep_end` is included.Must be
+            positive int <= number of timesteps
+            If `None`, returns single time step specified by `tstep_start`
+            If `-1`, returns all time steps from `tstep_start`:end
 
         Returns
         -------
-        weights : array, shape (n_components,)
+        item_data : ndarray, shape (y_count, x_count, [tstep_end-tstep_start])
+            Data for specified item and time steps.
 
         """
         dfs2_object = dfs.DfsFileFactory.Dfs2FileOpen(self.filename)

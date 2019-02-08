@@ -14,6 +14,31 @@ Dfsu
 
 .. autoclass:: dhitools.dfsu.Dfsu
 	:members:
+	:show-inheritance:
+
+Dfs0
+----
+
+.. autoclass:: dhitools.dfs.Dfs0
+	:members:
+	:inherited-members:
+	:show-inheritance:
+
+Dfs1
+----
+
+.. autoclass:: dhitools.dfs.Dfs1
+	:members:
+	:show-inheritance:
+	:inherited-members:
+
+Dfs2
+----
+
+.. autoclass:: dhitools.dfs.Dfs2
+	:members:
+	:show-inheritance:
+	:inherited-members:
 
 Units
 -----

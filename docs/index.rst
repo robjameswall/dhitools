@@ -21,7 +21,7 @@ Python tools for working with `DHI MIKE21 <https://www.mikepoweredbydhi.com/prod
 * Interpolate multiple raster DEMS directly to **.mesh** file
 * Read and analyse **.dfsu** model outputs
 * Create **.dfsu** roughness map directly from **.shp** and **.mesh**
-* Read **.dfs0**, **.dfs1** and **.dfs2** files (coming soon)
+* Read **.dfs0**, **.dfs1** and **.dfs2** files
 
 Due to depending on the **MIKE SDK DLL** libraries only Windows is supported.
 
