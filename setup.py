@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='dhitools',
-    version='0.0.6',
+    version='1.0.0',
     description='Python tools for working with DHI MIKE21',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
@@ -22,6 +22,7 @@ setup(
     install_requires=[
         "numpy >= 1.14.5",
         "PyCRS>=0.1.3",
-        "scipy>=1.1.0"
+        "scipy>=1.1.0",
+        "pandas>=0.23.1"
     ]
 )

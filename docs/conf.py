@@ -15,7 +15,7 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../'))
-autodoc_mock_imports = ["geopandas", "clr", "DHI", "System", "pandas"]
+autodoc_mock_imports = ["geopandas", "clr", "DHI", "System"]
 
 
 # -- Project information -----------------------------------------------------
@@ -27,7 +27,7 @@ author = 'Rob Wall'
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '0.0.6'
+release = '1.0.0'
 
 
 # -- General configuration ---------------------------------------------------
