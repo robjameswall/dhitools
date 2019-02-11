@@ -557,8 +557,10 @@ class Mesh(object):
         res : int
             Grid resolution
         mesh_mask : shapely Polygon object, optional
-            Mesh domain mask output from the method mask(). If this is not
-            provided, it will be created.
+            Mesh domain mask output from the method :func:`mask()`. If this is
+            not provided, it will be created by :func:`mask()`. `mesh_mask`
+            will be used to determine gridded points that are within the
+            polygon.
 
         Returns
         -------

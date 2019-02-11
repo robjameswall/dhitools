@@ -233,7 +233,7 @@ class Dfs1(_Dfs):
         ----------
         item_name : str
             Specified item to return element data. Item names can be found in
-            :class:`items <dhitools.dfs.Dfs1`>` attribute or by
+            :class:`items <dhitools.dfs.Dfs1>` attribute or by
             :func:`summary()`.
 
         Returns

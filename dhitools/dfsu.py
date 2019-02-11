@@ -638,9 +638,10 @@ class Dfsu(mesh.Mesh):
         ----------
         res : int
             Grid resolution
-        mesh_mask : shapely Polygon object, optional
-            Mesh domain mask output from the method mask(). If this is not
-            provided, it will be created.
+        mesh_mask : shapely Polygon object
+            Mesh domain mask output from the :func:`mask() <dhitools.mesh.Mesh.mask()>`
+            or any shapely polygon. `mesh_mask` will be used to determine
+            gridded points that are within the polygon.
 
         Returns
         -------
