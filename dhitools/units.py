@@ -60,7 +60,7 @@ def available_items():
         Available MIKE21 item names. Get the correct item code when name is
         used in :func:`get_item()`.
     """
-    return mike_items.keys()
+    return list(mike_items.keys())
 
 
 def available_units():
@@ -73,7 +73,7 @@ def available_units():
         Available MIKE21 unit names. Get the correct unit code when name is
         used in :func:`get_unit()`.
     """
-    return mike_units.keys()
+    return list(mike_units.keys())
 
 
 mike_items = {
