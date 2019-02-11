@@ -48,6 +48,7 @@ See the following Jupyter notebooks for examples:
 * [Interpolate mesh](https://github.com/robjameswall/dhitools/blob/master/notebooks/mesh_interpolation.ipynb)
 * [Create roughness map](https://github.com/robjameswall/dhitools/blob/master/notebooks/roughness_map.ipynb)
 * [Dfsu analysis](https://github.com/robjameswall/dhitools/blob/master/notebooks/dfsu_analysis.ipynb) - reading items, calculating statistics, plotting, interpolating to regular grid, creating new dfsu files
+* [Dfs012 analysis](https://github.com/robjameswall/dhitools/blob/master/notebooks/dfs012_analysis.ipynb)
 
 ## Documentation
 
