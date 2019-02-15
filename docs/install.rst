@@ -5,7 +5,7 @@ Install
 
 **Requirements**
 
-* `MIKE SDK <https://www.mikepoweredbydhi.com/download/mike-2016/mike-sdk?ref=%7B181C63FF-2342-4C41-9F84-F93884595EF3%7D>`_
+* `MIKE SDK 2019 <https://www.mikepoweredbydhi.com/download/mike-2019/mike-sdk?ref={5399F5D6-40C6-4BB2-8311-37B615A652C6}>`_
 * `GDAL/OGR <https://pypi.org/project/GDAL/>`_
 * `Geopandas <https://pypi.org/project/geopandas/)>`_
 * `Pythonnet <http://pythonnet.github.io/>`_
@@ -18,7 +18,7 @@ Recommended that `Anaconda <https://www.anaconda.com/download/>`_ is used to ins
 
 First, install **MIKE software development kit**:
 
-Download installer from `here <https://www.mikepoweredbydhi.com/download/mike-2016/mike-sdk?ref=%7B181C63FF-2342-4C41-9F84-F93884595EF3%7D>`_ 
+Download installer from `here <https://www.mikepoweredbydhi.com/download/mike-2019/mike-sdk?ref={5399F5D6-40C6-4BB2-8311-37B615A652C6}>`_ 
 
 After installing the MIKE SDK::
 

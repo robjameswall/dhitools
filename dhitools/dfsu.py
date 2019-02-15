@@ -715,7 +715,6 @@ class Dfsu(mesh.Mesh):
 
         dfs_obj = dfs.DfsFileFactory.DfsuFileOpen(self.filename)
         builder = dfs.dfsu.DfsuBuilder.Create(dfs.dfsu.DfsuFileType.Dfsu2D)
-        d = dfs.DfsFactory()
 
         # Create mesh nodes
         node_x = Array[System.Double](self.nodes[:,0])
@@ -733,7 +732,7 @@ class Dfsu(mesh.Mesh):
         # Set dfsu items
         builder.SetNodes(node_x, node_y, node_z, node_id)
         builder.SetElements(dfs_obj.ElementTable)
-        builder.SetProjection(d.CreateProjection(self.projection))
+        builder.SetProjection(dfs_obj.Projection)
 
         # Start datetime and time step
         if start_datetime is not None:
