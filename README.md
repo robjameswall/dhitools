@@ -40,6 +40,10 @@ pip install pythonnet
 pip install dhitools
 ```
 
+**Latest Build**
+
+Clone this repository
+
 
 ## Examples
 
