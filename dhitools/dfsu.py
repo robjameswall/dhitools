@@ -96,8 +96,13 @@ class Dfsu(mesh.Mesh):
 
         # Time attributes
         self.start_datetime_str = dfsu_object.StartDateTime.Date.ToString()
-        self.start_datetime = dt.datetime.strptime(self.start_datetime_str,
-                                                   '%d/%m/%Y %H:%M:%S %p')
+        dt_start_obj = dfsu_object.StartDateTime
+        self.start_datetime = dt.datetime(year=dt_start_obj.Year,
+                                          month=dt_start_obj.Month,
+                                          day=dt_start_obj.Day,
+                                          hour=dt_start_obj.Hour,
+                                          minute=dt_start_obj.Minute,
+                                          second=dt_start_obj.Second)
         self.timestep = dfsu_object.TimeStepInSeconds
         self.number_tstep = dfsu_object.NumberOfTimeSteps - 1
         self.end_datetime = self.start_datetime + \
