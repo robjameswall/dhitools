@@ -78,7 +78,7 @@ class _Dfs(object):
         """
         print("Input file: {}".format(self.filename))
         print("Time start = {}".format(dt.datetime.strftime(self.start_datetime,
-                                                            "%d/%m/%Y %H:%M:%S")))
+                                                            "%Y/%m/%d %H:%M:%S")))
         print("Number of timesteps = {}".format(self.number_tstep))
         print("Timestep = {}".format(self.timestep))
         print("Number of items = {}".format(self.num_items))
