@@ -220,7 +220,7 @@ class Dfs1(_Dfs):
                 out_arr[i,:] = _utils.dotnet_arr_to_ndarr(dfs1_object.ReadItemTimeStep(item_idx, i).Data)
             out_df = pd.DataFrame(data=out_arr, index=self.time)
 
-        self.items[itemname]["data"] = out_df
+            self.items[itemname]["data"] = out_df
 
         if close:
             dfs1_object.Close()
