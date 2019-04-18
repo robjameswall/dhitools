@@ -97,6 +97,7 @@ class _Dfs(object):
             print("(del_X, del_Y) = ({}, {})".format(self.del_x, self.del_y))
             print("(X_min, Y_min) = ({}, {})".format(self.x_min, self.y_min))
             print("(X_max, Y_max) = ({}, {})".format(self.x_max, self.y_max))
+            print("Angle to North = {} ".format(self.orientation))
             print("")
 
         print("Items:")
@@ -333,6 +334,7 @@ class Dfs2(_Dfs):
         self.del_y = sa.Dy
         self.y_count = sa.YCount
         self.y_max = self.y_min + (self.del_y * self.y_count)
+        self.orientation = fi.Projection.Orientation
         self.gridshape = (self.y_count, self.x_count)
 
         self.X, self.Y = np.meshgrid(np.arange(self.x_min, self.x_max, self.del_x),
